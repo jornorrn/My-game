@@ -1,0 +1,22 @@
+[
+    [
+    {
+        "id": 1001,
+        "title": "移速",
+        "desc": "移动速度提升 10%",
+        "image": "icon_boots", 
+        "tier": 1,
+        "type": "stat",
+        "data": { "attr": "speed", "value": 1.1, "mode": "mult" }
+    },
+    {
+        "id": 1002,
+        "title": "吸血",
+        "desc": "击杀敌人回复 1 点生命",
+        "image": "icon_vampire",
+        "tier": 2,
+        "type": "special",
+        "data": { "effect": "life_steal", "value": 1 }
+    }
+]
+]

@@ -1,0 +1,11 @@
+[
+    {
+        "id": 2001,
+        "name": "史莱姆",
+        "image": "enemy_slime",
+        "hp": 30,
+        "damage": 10,
+        "speed": 100,
+        "xp": 10
+    }
+]
