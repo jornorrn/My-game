@@ -4,7 +4,7 @@
         "name": "魔杖",
         "image": "projectile_magic",
         "icon": "icon_wand", 
-        "cooldown": 600,
+        "cooldown": 400,
         "damage": 10,
         "speed": 400
     }

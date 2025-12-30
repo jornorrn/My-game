@@ -1,4 +1,5 @@
 import pygame
+import math
 from src.settings import *
 from src.components import Entity
 from src.weapon import WeaponController
@@ -7,12 +8,22 @@ class Player(Entity):
     def __init__(self, pos, groups, obstacle_sprites, enemy_sprites, resource_manager):
         super().__init__(groups, pos, z_layer=LAYERS['main'])
         
-        # 1. 图像设置 (暂时用绿色方块代替，稍后在 load 阶段替换)
+        self.res = resource_manager # 保存引用以便切换图片
+        self.animations = {     # 预加载四方向图片
+            'up': self.res.get_image('player_up'),
+            'down': self.res.get_image('player_down'),
+            'left': self.res.get_image('player_left'),
+            'right': self.res.get_image('player_right'),
+            # 如果没有专门的图，可以用 fallback
+            'idle': self.res.get_image('player') 
+        }
+        self.image = self.animations['down'] # 初始朝下
         self.image.fill(COLORS['debug']) 
+
         self.hitbox = self.rect.inflate(-10, -10) # 稍微缩小碰撞箱
         self.set_obstacles(obstacle_sprites)
 
-        # 2. 数值属性
+        # 数值属性
         self.stats = {
             'max_hp': 100,
             'speed': 300,        # 像素/秒
@@ -23,13 +34,14 @@ class Player(Entity):
         self.level = 1
         self.xp_required = 100
         
-        # 3. 战斗状态
+        # 战斗状态
         self.is_dead = False
         self.iframes = 500       # 无敌时间 (毫秒)
         self.last_hit_time = 0
         
-        # 4. 武器接口
-        self.weapon_controller = WeaponController(self, groups, enemy_sprites, resource_manager)
+        # 武器接口
+        self.weapon_controller = WeaponController(self, groups, enemy_sprites, 
+                        obstacle_sprites, resource_manager)
 
     def input(self):
         """处理键盘输入"""
@@ -50,15 +62,32 @@ class Player(Entity):
         else:
             self.direction.x = 0
 
-        # 鼠标朝向逻辑 (Flip)
-        # 获取鼠标在屏幕上的位置
-        mouse_x, _ = pygame.mouse.get_pos()
-        # 获取玩家在屏幕上的位置 (注意：如果有摄像机，这里需要减去摄像机偏移量)
-        # 目前暂时用 rect.centerx 近似，等摄像机做好后需要修正
-        if mouse_x < self.rect.centerx:
-            # 鼠标在左，翻转图像 (假设原始素材是朝右的)
-            # self.image = pygame.transform.flip(self.original_image, True, False)
-            pass 
+    def get_mouse_direction(self):
+        """计算鼠标相对于屏幕中心的角度，并改变朝向图片"""
+        mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
+        screen_center = pygame.math.Vector2(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+        diff = mouse_pos - screen_center
+        
+        # 计算角度 (-180 到 180)
+        angle = math.degrees(math.atan2(-diff.y, diff.x))
+        if -45 <= angle < 45:
+            self.status = 'right'
+        elif 45 <= angle < 135:
+            self.status = 'up'
+        elif -135 <= angle < -45:
+            self.status = 'down'
+        else:
+            self.status = 'left'
+
+        # 切换图片
+        if self.status in self.animations:
+            self.image = self.animations[self.status]
+            # 保持中心位置不变
+            current_center = self.rect.center
+            self.rect = self.image.get_rect(center=current_center)
+            # hitbox 跟随 rect 中心
+            self.hitbox.center = self.rect.center
+
 
     def check_level_up(self):
         """检查是否升级"""

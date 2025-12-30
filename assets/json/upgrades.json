@@ -1,5 +1,4 @@
 [
-    [
     {
         "id": 1001,
         "title": "移速",
@@ -18,5 +17,4 @@
         "type": "special",
         "data": { "effect": "life_steal", "value": 1 }
     }
-]
 ]

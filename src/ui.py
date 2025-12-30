@@ -25,32 +25,8 @@ class UI:
     # 1. 战斗 HUD (状态: PLAYING)
     # ====================================================
     def draw_hud(self, player):
-        # 1. 定义血条的位置 (屏幕左上角)
-        bar_width = 200
-        bar_height = 20
-        x = 20
-        y = 20
-        
-        # 2. 绘制背景框 (深灰色)
-        bg_rect = pygame.Rect(x, y, bar_width, bar_height)
-        pygame.draw.rect(self.display_surface, (50, 50, 50), bg_rect)
-        
-        # 3. 计算当前血量长度
-        ratio = player.current_hp / player.stats['max_hp']
-        # 防止血量小于0导致报错
-        if ratio < 0: ratio = 0
-        current_width = bar_width * ratio
-        
-        # 4. 绘制前景血条 (红色)
-        fg_rect = pygame.Rect(x, y, current_width, bar_height)
-        pygame.draw.rect(self.display_surface, (200, 50, 50), fg_rect)
-        
-        # 5. 绘制边框 (白色，线宽2)
-        pygame.draw.rect(self.display_surface, (255, 255, 255), bg_rect, 2)
-
-        # 6. (可选) 绘制简单的文字测试
-        # text_surf = self.font.render(f"HP: {int(player.current_hp)}", True, (255, 255, 255))
-        # self.display_surface.blit(text_surf, (x + 5, y + 25))
+        #我希望用素材来做血条显示。所以不要直接在这里写血条显示硬编码代码！！！
+        pass
 
     # ====================================================
     # 2. 升级选择 (状态: LEVEL_UP)
