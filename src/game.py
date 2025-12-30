@@ -6,6 +6,7 @@ from src.loader import ResourceManager
 from src.player import Player
 from src.enemy import Enemy
 from src.components import YSortCameraGroup, Tile
+from src.upgrade_system import UpgradeManager
 
 class Game:
     def __init__(self):
@@ -15,21 +16,19 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         
-        # 1. 加载资源
+        # 加载资源
         self.loader = ResourceManager()
         self.loader.load_all()
 
-        # 2. 创建摄像机组
         self.all_sprites = YSortCameraGroup() 
         self.obstacle_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
+        self.upgrade_manager = UpgradeManager(self.loader)
 
-        # 3. 生成地图和玩家
         self.setup_test_map()
         
-        # 4. 生成敌人 (使用关键字参数，防止传错)
         self.spawn_timer = 0
-        self.spawn_interval = 1000
+        self.base_spawn_interval = 1200
 
         # 暂时屏蔽 UI，防止报错
         # from src.ui import UI
@@ -80,11 +79,6 @@ class Game:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
 
-    def update(self, dt):
-        if self.state == 'PLAYING':
-            self.all_sprites.update(dt)
-            self.enemy_spawner(dt) # 驱动刷怪笼
-
     def draw(self):
         self.screen.fill(COLORS['bg_void'])
         
@@ -94,51 +88,47 @@ class Game:
         pygame.display.update()
 
     def enemy_spawner(self, dt):
-        """
-        无限怪群生成逻辑
-        """
-        self.spawn_timer += dt * 1000 # 转毫秒
+        self.spawn_timer += dt * 1000 
         
-        # 随着等级提高，生成间隔变短 (最快 0.2秒一只)
-        current_interval = max(200, self.spawn_interval - (self.player.level * 50))
+        # [修改] 动态间隔: 基础1200ms - (等级-1)*50ms，最低200ms
+        # 建议后续将 1200 提取为 settings.SPAWN_INTERVAL_BASE
+        current_interval = max(200, 1200 - (self.player.level - 1) * 50)
         
         if self.spawn_timer >= current_interval:
             self.spawn_timer = 0
             
-            # 1. 筛选当前等级合法的怪物
-            # 需确保 enemies.json 里有 tier 字段，如果没有默认 tier=1
+            # 筛选符合当前等级(tier <= player.level)的怪物
             available_enemies = []
             for e_id, data in self.loader.data['enemies'].items():
                 tier = data.get('tier', 1)
-                if tier <= self.player.level: # 如果怪物阶级 <= 玩家等级
+                if tier <= self.player.level:
                     available_enemies.append(e_id)
             
             if not available_enemies: return
 
-            # 2. 随机选择一种
             enemy_id = random.choice(available_enemies)
             
-            # 3. 随机位置 (在玩家屏幕外生成)
-            # 简单实现：在地图范围内随机，但离玩家有一定距离
-            # 更好的实现是：摄像机视野外圈
-            while True:
+            # 随机坐标逻辑 (简单防卡死版)
+            for _ in range(10): # 尝试10次
                 x = random.randint(2 * TILE_SIZE, 38 * TILE_SIZE)
                 y = random.randint(2 * TILE_SIZE, 38 * TILE_SIZE)
                 spawn_pos = pygame.math.Vector2(x, y)
-                player_pos = pygame.math.Vector2(self.player.rect.center)
-                
-                # 距离检查：距离玩家至少 600 像素才生成
-                if spawn_pos.distance_to(player_pos) > 600:
+                if spawn_pos.distance_to(self.player.rect.center) > 500:
+                    Enemy((x, y), enemy_id, [self.all_sprites, self.enemy_sprites], 
+                          self.obstacle_sprites, self.player, self.loader)
                     break
-            
-            Enemy(
-                pos=(x, y), 
-                enemy_id=enemy_id, 
-                groups=[self.all_sprites, self.enemy_sprites], 
-                obstacle_sprites=self.obstacle_sprites, 
-                player=self.player, 
-                resource_manager=self.loader
-            )
-            #debug
-            print(f"[DEBUG] Spawned enemy {enemy_id} at {x},{y}")
 
+    def update(self, dt):
+        if self.state == 'PLAYING':
+            self.all_sprites.update(dt)
+            self.enemy_spawner(dt)
+            
+            # 升级检测
+            if self.player.check_level_up():
+                print(f"--- LEVEL UP! Level: {self.player.level} ---")
+                options = self.upgrade_manager.get_random_options(self.player.level)
+                
+                # 临时自动选择第1个 (直到 UI 完成)
+                if options:
+                    print(f">> Auto-picked: {options[0].title}")
+                    options[0].apply(self.player)

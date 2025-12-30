@@ -1,65 +1,87 @@
+# --- src/upgrade_system.py ---
 import random
 
 class UpgradeOption:
-    """
-    升级选项的基类。
-    所有具体的升级效果（加数值、给武器）都通过继承或实例化此类来实现。
-    """
-    def __init__(self, u_id, title, description, icon_key, tag):
-        self.id = u_id
-        self.title = title
-        self.description = description
-        self.icon_key = icon_key  # 对应 ResourceManager 中的键
-        self.tag = tag            # 标签：'stat' 或 'weapon' 或 'special'
+    """升级选项基类"""
+    def __init__(self, data):
+        self.id = data['id']
+        self.title = data['title']
+        self.description = data['desc']
+        self.icon_key = data['image']
+        self.type = data['type'] # 'stat', 'weapon', 'special'
+        self.tier = data.get('tier', 1)
 
     def apply(self, player):
-        """虚函数，由子类实现具体效果"""
         raise NotImplementedError
 
 class StatUpgrade(UpgradeOption):
-    """数值类升级：如增加血量上限、增加移动速度"""
-    def __init__(self, u_id, title, desc, icon, attribute, value, mode='add'):
-        super().__init__(u_id, title, desc, icon, 'stat')
-        self.attribute = attribute # 例如 'speed'
-        self.value = value         # 例如 50 或 1.1
-        self.mode = mode           # 'add' (加法) 或 'mult' (乘法)
+    """数值升级"""
+    def __init__(self, data):
+        super().__init__(data)
+        # 解析 data 字段: { "attr": "speed", "value": 1.1, "mode": "mult" }
+        self.effect_data = data['data']
 
     def apply(self, player):
-        # 获取当前玩家属性
-        current = getattr(player, self.attribute, 0)
+        attr = self.effect_data['attr']
+        val = self.effect_data['value']
+        mode = self.effect_data['mode']
         
-        if self.mode == 'add':
-            setattr(player, self.attribute, current + self.value)
-        elif self.mode == 'mult':
-            setattr(player, self.attribute, current * self.value)
-        
-        print(f"Applied Stat Upgrade: {self.attribute} changed to {getattr(player, self.attribute)}")
+        if hasattr(player, 'stats') and attr in player.stats:
+            old_val = player.stats[attr]
+            if mode == 'add':
+                player.stats[attr] += val
+            elif mode == 'mult':
+                player.stats[attr] *= val
+            print(f"[UPGRADE] {attr} changed from {old_val} to {player.stats[attr]}")
+        else:
+            print(f"[WARNING] Player has no stat: {attr}")
 
 class WeaponUpgrade(UpgradeOption):
-    """武器类升级：获得新武器 或 强化现有武器"""
-    def __init__(self, u_id, title, desc, icon, weapon_id):
-        super().__init__(u_id, title, desc, icon, 'weapon')
-        self.weapon_id = weapon_id
+    def __init__(self, data):
+        super().__init__(data)
+        self.weapon_id = int(self.effect_data.get('weapon_id', 0))
 
     def apply(self, player):
-        player.weapon_controller.add_or_upgrade_weapon(self.weapon_id)
-
-# =========================================
-# 升级库定义 (Database)
-# =========================================
-# 这里实例化所有可能的升级卡片
-UPGRADE_DATABASE = [
-    
-]
+        print(f"[UPGRADE] Get Weapon ID: {self.weapon_id}")
+        # [逻辑] 直接追加 ID，允许持有多个相同武器
+        player.weapon_controller.equipped_weapons.append(self.weapon_id)
 
 class UpgradeManager:
-    """负责管理随机抽取、卡池过滤"""
-    def __init__(self):
-        self.available_upgrades = list(UPGRADE_DATABASE) # 浅拷贝
-    
-    def get_random_options(self, amount=3):
-        # TODO: 从 available_upgrades 中随机抽取 amount 个
-        # 抽取时需要判断条件（例如：玩家已经有这个武器了吗？如果升满级了就不应该再出现）
-        # 返回 UpgradeOption 对象列表
-        return random.sample(self.available_upgrades, min(amount, len(self.available_upgrades)))
-    
+    def __init__(self, resource_manager):
+        self.res = resource_manager
+        self.db = [] # 所有可能的升级对象列表
+        self._build_db()
+
+    def _build_db(self):
+        """从 Loader 的 JSON 数据构建对象"""
+        raw_data = self.res.data['upgrades']
+        
+        for u_id, item in raw_data.items():
+            u_type = item.get('type')
+            
+            try:
+                if u_type == 'stat':
+                    self.db.append(StatUpgrade(item))
+                elif u_type == 'weapon':
+                    # 注意：需要在 upgrades.json 里定义 weapon 类型的结构
+                    self.db.append(WeaponUpgrade(item))
+                else:
+                    # 暂时处理通用类型或未定义类型
+                    print(f"[System] Skip unknown upgrade type: {u_type} for ID {u_id}")
+            except Exception as e:
+                print(f"[ERROR] Failed to parse upgrade {u_id}: {e}")
+        
+        print(f"[System] Upgrade Database built. Total options: {len(self.db)}")
+
+    def get_random_options(self, level, amount=3):
+        """
+        随机获取 amount 个升级选项。
+        TODO: 可以加入 level 过滤 (tier) 或 前置条件检查
+        """
+        if not self.db:
+            return []
+        
+        # 简单随机，允许重复吗？通常不允许
+        # 如果池子比 amount 小，就全返回
+        k = min(amount, len(self.db))
+        return random.sample(self.db, k)   

@@ -7,6 +7,7 @@ class Enemy(Entity):
         super().__init__(groups, pos, z_layer=LAYERS['main'])
         
         self.player = player
+        self.set_obstacles(obstacle_sprites)
         data = resource_manager.data['enemies'][enemy_id]
         
         self.stats = data
@@ -54,5 +55,8 @@ class Enemy(Entity):
 
     def die(self):
         print(f"[DEBUG] Enemy died.")
+        self.player.xp += self.stats.get('xp', 10)
+        print(f"[DEBUG] Enemy died. Player XP: {self.player.xp}")
         self.kill()
+        
         # TODO: 这里可以播放死亡动画
