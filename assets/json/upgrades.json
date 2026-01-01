@@ -16,5 +16,14 @@
         "tier": 2,
         "type": "special",
         "data": { "effect": "life_steal", "value": 1 }
+    },
+    {
+        "id": 1003,
+        "title": "再来一把",
+        "desc": "多一把魔杖",
+        "image": "icon_vampire",
+        "tier": 2,
+        "type": "special",
+        "data": { "effect": "life_steal", "value": 1 }
     }
 ]

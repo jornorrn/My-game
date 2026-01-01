@@ -7,6 +7,7 @@ from src.player import Player
 from src.enemy import Enemy
 from src.components import YSortCameraGroup, Tile
 from src.upgrade_system import UpgradeManager
+from src.ui import UI
 
 class Game:
     def __init__(self):
@@ -30,11 +31,12 @@ class Game:
         self.spawn_timer = 0
         self.base_spawn_interval = 1200
 
-        # 暂时屏蔽 UI，防止报错
-        # from src.ui import UI
-        # self.ui = UI(self.screen, self.loader) 
+        self.ui = UI(self.screen, self.loader) 
         
         self.state = 'PLAYING' 
+
+        # [新增] 死亡计时器
+        self.death_timer = 0
 
     def setup_test_map(self):
         # 生成 40x40 的大地图
@@ -61,31 +63,6 @@ class Game:
             enemy_sprites=self.enemy_sprites,
             resource_manager=self.loader
         )
-
-    def run(self):
-        while self.running:
-            dt = self.clock.tick(FPS) / 1000.0
-            self.events()
-            self.update(dt)
-            self.draw()
-        pygame.quit()
-        sys.exit()
-
-    def events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
-
-    def draw(self):
-        self.screen.fill(COLORS['bg_void'])
-        
-        # 只画场景，不画 UI
-        self.all_sprites.custom_draw(self.player)
-        
-        pygame.display.update()
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 
@@ -122,13 +99,62 @@ class Game:
         if self.state == 'PLAYING':
             self.all_sprites.update(dt)
             self.enemy_spawner(dt)
-            
+
+            #死亡检测
+            if self.player.is_dead:
+                self.state = 'GAME_OVER'
+                self.death_timer = 0 # 重置计时
+
             # 升级检测
             if self.player.check_level_up():
                 print(f"--- LEVEL UP! Level: {self.player.level} ---")
-                options = self.upgrade_manager.get_random_options(self.player.level)
+                # [强制修改] 为了测试扇形，无视 JSON，直接塞一把 ID 3001 的武器
+                print(f">> [DEBUG] Force adding Weapon 3001. Old count: {len(self.player.weapon_controller.equipped_weapons)}")
+                self.player.weapon_controller.equipped_weapons.append(3001)
+                print(f">> [DEBUG] New count: {len(self.player.weapon_controller.equipped_weapons)}")
                 
-                # 临时自动选择第1个 (直到 UI 完成)
-                if options:
-                    print(f">> Auto-picked: {options[0].title}")
-                    options[0].apply(self.player)
+        elif self.state == 'GAME_OVER':
+            # [新增] 死亡倒计时逻辑
+            self.death_timer += dt
+            if self.death_timer >= 2.0: # 2秒后重启
+                print(">> Restarting Game...")
+                self.reset_game()
+
+    def reset_game(self):
+        """[新增] 快速重置游戏状态"""
+        # 清空所有精灵
+        self.all_sprites.empty()
+        self.obstacle_sprites.empty()
+        self.enemy_sprites.empty()
+        
+        # 重新生成地图和玩家
+        self.setup_test_map()
+        
+        # 重置数值
+        self.spawn_timer = 0
+        self.state = 'PLAYING'
+        self.death_timer = 0
+
+    def draw(self):
+        self.screen.fill(COLORS['bg_void'])
+        self.all_sprites.custom_draw(self.player)
+        self.ui.draw_hud(self.player)
+        
+        pygame.display.update()
+
+    def events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.running = False
+
+    def run(self):
+        while self.running:
+            dt = self.clock.tick(FPS) / 1000.0
+            self.events()
+            self.update(dt)
+            self.draw()
+        pygame.quit()
+        sys.exit()

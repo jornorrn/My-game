@@ -8,19 +8,19 @@ class Player(Entity):
     def __init__(self, pos, groups, obstacle_sprites, enemy_sprites, resource_manager):
         super().__init__(groups, pos, z_layer=LAYERS['main'])
         
-        self.res = resource_manager # 保存引用以便切换图片
-        self.animations = {     # 预加载四方向图片
-            'up': self.res.get_image('player_up'),
-            'down': self.res.get_image('player_down'),
-            'left': self.res.get_image('player_left'),
-            'right': self.res.get_image('player_right'),
-            # 如果没有专门的图，可以用 fallback
-            'idle': self.res.get_image('player') 
-        }
-        self.image = self.animations['down'] # 初始朝下
-        self.image.fill(COLORS['debug']) 
-
-        self.hitbox = self.rect.inflate(-10, -10) # 稍微缩小碰撞箱
+        self.res = resource_manager
+        
+        # 动画状态机
+        self.status = 'down'
+        self.frame_index = 0
+        self.animation_speed = 10
+        self.animations = {} # 存放切割后的图片列表
+        # 加载并切割图片
+        self.import_assets()
+        # 设置初始图片
+        self.image = self.animations[self.status][0]
+        self.rect = self.image.get_rect(topleft=pos)
+        self.hitbox = self.rect.inflate(-4, -10) # 针对16x20的小人微调碰撞箱
         self.set_obstacles(obstacle_sprites)
 
         # 数值属性
@@ -62,6 +62,55 @@ class Player(Entity):
         else:
             self.direction.x = 0
 
+    def import_assets(self):
+        """切割 Sprite Sheet"""
+        # 1. 获取整张大图 (Key 是文件名，无后缀)
+        sprite_sheet = self.res.get_image('character_18_frame16x20')
+        
+        # 2. 确认单帧尺寸 (根据文件名)
+        frame_w, frame_h = 16, 20
+        
+        # 3. 切割逻辑 (假设 3列 4行: 下, 左, 右, 上)
+        self.animations = {'down': [], 'left': [], 'right': [], 'up': []}
+        
+        # 辅助函数: 切割一行
+        def get_row(row_index, amount):
+            frames = []
+            for col in range(amount):
+                x = col * frame_w
+                y = row_index * frame_h
+                # subsurface 共享内存，效率高
+                rect = pygame.Rect(x, y, frame_w, frame_h)
+                # 放大一点显示，不然16像素太小了 (可选，这里放大2倍)
+                surf = sprite_sheet.subsurface(rect)
+                scaled_surf = pygame.transform.scale(surf, (32, 40)) 
+                frames.append(scaled_surf)
+            return frames
+
+        self.animations['down']  = get_row(0, 3)
+        self.animations['left']  = get_row(1, 3)
+        self.animations['right'] = get_row(2, 3)
+        self.animations['up']    = get_row(3, 3)
+
+    def animate(self, dt):
+        # 如果停止移动
+        if self.direction.magnitude() == 0:
+            # [修改] 静止时显示第 1 帧 (中间的站立图)
+            self.image = self.animations[self.status][1]
+            # 可选：重置 frame_index 到 1，这样下次移动从 1 开始算
+            # self.frame_index = 1
+        else:
+            # 移动中：循环播放 0 -> 1 -> 2 -> 0
+            self.frame_index += self.animation_speed * dt
+            if self.frame_index >= len(self.animations[self.status]):
+                self.frame_index = 0
+            
+            # 取整显示当前帧
+            self.image = self.animations[self.status][int(self.frame_index)]
+            
+        # 保持 rect 中心对齐 (防止图片尺寸微小差异导致抖动)
+        # 注意：这行代码非常重要，必须保留
+        self.rect = self.image.get_rect(center=self.hitbox.center)
     def get_mouse_direction(self):
         """计算鼠标相对于屏幕中心的角度，并改变朝向图片"""
         mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
@@ -70,24 +119,10 @@ class Player(Entity):
         
         # 计算角度 (-180 到 180)
         angle = math.degrees(math.atan2(-diff.y, diff.x))
-        if -45 <= angle < 45:
-            self.status = 'right'
-        elif 45 <= angle < 135:
-            self.status = 'up'
-        elif -135 <= angle < -45:
-            self.status = 'down'
-        else:
-            self.status = 'left'
-
-        # 切换图片
-        if self.status in self.animations:
-            self.image = self.animations[self.status]
-            # 保持中心位置不变
-            current_center = self.rect.center
-            self.rect = self.image.get_rect(center=current_center)
-            # hitbox 跟随 rect 中心
-            self.hitbox.center = self.rect.center
-
+        if -45 <= angle < 45: self.status = 'right'
+        elif 45 <= angle < 135: self.status = 'up'
+        elif -135 <= angle < -45: self.status = 'down'
+        else: self.status = 'left'
 
     def check_level_up(self):
         """检查是否升级"""
@@ -114,5 +149,7 @@ class Player(Entity):
     def update(self, dt):
         self.speed = self.stats['speed']
         self.input()
+        self.get_mouse_direction()
+        self.animate(dt) # [新增] 驱动动画
         self.move(dt)
         self.weapon_controller.update()
