@@ -139,6 +139,11 @@ class Game:
         self.screen.fill(COLORS['bg_void'])
         self.all_sprites.custom_draw(self.player)
         self.ui.draw_hud(self.player)
+
+        if self.state == 'PAUSED':
+            self.ui.draw_pause()
+        elif self.state == 'GAME_OVER':
+            self.ui.draw_game_over()
         
         pygame.display.update()
 
@@ -146,9 +151,13 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
+                    if self.state == 'PLAYING':
+                        self.state = 'PAUSED'
+                    elif self.state == 'PAUSED':
+                        self.state = 'PLAYING'
 
     def run(self):
         while self.running:

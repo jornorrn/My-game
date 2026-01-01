@@ -149,8 +149,12 @@ class UI:
         绘制死亡结算
         """
         # 实现逻辑：
-        # 1. 绘制红色/黑色遮罩
-        # 2. 绘制 "YOU DIED" 大字
+        # 1. 绘制遮罩 (可以换成红色遮罩增加压迫感，这里暂时用黑色)
+        self.display_surface.blit(self.mask, (0, 0))
+        # 2. 绘制标题 "YOU DIED" (红色)
+        title_surf = self.title_font.render("YOU DIED", False, (200, 50, 50))
+        title_rect = title_surf.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
+        self.display_surface.blit(title_surf, title_rect)
         pass
 
     # ====================================================
