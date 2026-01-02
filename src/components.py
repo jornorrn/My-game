@@ -130,7 +130,7 @@ class YSortCameraGroup(pygame.sprite.Group):
         #    注意：只对 LAYERS['main'] 层级的物体排序，地板层不需要排序
         #    为了性能，我们分层绘制
         
-        # A. 先画地板 (Ground)
+        # 先画地板 (Ground)
         for sprite in self.sprites():
             if sprite.z_layer == LAYERS['ground']:
                 offset_pos = sprite.rect.topleft - self.offset
@@ -138,16 +138,24 @@ class YSortCameraGroup(pygame.sprite.Group):
                 if -TILE_SIZE < offset_pos.x < WINDOW_WIDTH and -TILE_SIZE < offset_pos.y < WINDOW_HEIGHT:
                     self.display_surface.blit(sprite.image, offset_pos)
 
-        # B. 再画活动物体 (Main) - 需要排序
-        #    使用 sorted 函数，key 是 sprite.rect.centery
-        sorted_sprites = sorted(
-            [s for s in self.sprites() if s.z_layer != LAYERS['ground']], 
-            key=lambda s: s.rect.centery
-        )
+        # [新增] 画底层特效 (Layer 1: vfx_bottom) - 比如光环、脚印
+        # 这些东西在地面之上，但在角色之下，且不需要Y轴排序(通常扁平)
+        for sprite in self.sprites():
+            if sprite.z_layer == LAYERS['vfx_bottom']:
+                offset_pos = sprite.rect.topleft - self.offset
+                self.display_surface.blit(sprite.image, offset_pos)
+
+        # 3. 画活动物体 (Layer 2: main) - 需要 YSort
+        # 只筛选 main 层的物体进行排序
+        main_sprites = [s for s in self.sprites() if s.z_layer == LAYERS['main']]
+        sorted_sprites = sorted(main_sprites, key=lambda s: s.rect.centery)
 
         for sprite in sorted_sprites:
             offset_pos = sprite.rect.topleft - self.offset
             self.display_surface.blit(sprite.image, offset_pos)
-            
-            # [DEBUG] 画出碰撞箱 (可选，按 P 键开启之类的)
-            # pygame.draw.rect(self.display_surface, (255, 0, 0), sprite.hitbox.move(-self.offset.x, -self.offset.y), 1)
+
+        # 4. 画顶层特效 (Layer 3: vfx_top) - 比如爆炸、悬浮武器
+        for sprite in self.sprites():
+            if sprite.z_layer == LAYERS['vfx_top']:
+                offset_pos = sprite.rect.topleft - self.offset
+                self.display_surface.blit(sprite.image, offset_pos)

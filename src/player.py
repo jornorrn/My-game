@@ -4,6 +4,43 @@ from src.settings import *
 from src.components import Entity
 from src.weapon import WeaponController
 
+class FloatingWeapon(pygame.sprite.Sprite):
+    """纯装饰用的悬浮武器"""
+    def __init__(self, groups, image, player, angle_offset, distance=50):
+        # 放在 vfx_top 层，不挡住玩家
+        super().__init__(groups)
+        self.player = player
+        self.original_image = image
+        self.image = image
+        self.z_layer = LAYERS['vfx_top']
+        self.angle_offset = angle_offset
+        self.distance = distance
+        self.rect = self.image.get_rect()
+        # 不需要 hitbox，因为只是装饰
+
+    def update(self, dt):
+        # 简单的环绕动画 (或者跟随)
+        # 这里实现为：位于玩家身后半圆，跟随玩家移动
+        
+        # 如果你想让它旋转，可以用 current_time
+        # 这里实现简单的固定相对位置
+        
+        center = self.player.rect.center
+        # 假设 0 度在右边
+        rad = math.radians(self.angle_offset)
+        
+        # 简单的呼吸动画
+        t = pygame.time.get_ticks() / 500
+        hover_dist = self.distance + math.sin(t + self.angle_offset) * 5
+        
+        x = center[0] + math.cos(rad) * hover_dist
+        y = center[1] + math.sin(rad) * hover_dist
+        
+        self.rect.center = (x, y)
+        # 可选：让武器指向外侧
+        self.image = pygame.transform.rotate(self.original_image, -self.angle_offset - 90)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
 class Player(Entity):
     def __init__(self, pos, groups, obstacle_sprites, enemy_sprites, resource_manager):
         super().__init__(groups, pos, z_layer=LAYERS['main'])
@@ -42,6 +79,50 @@ class Player(Entity):
         # 武器接口
         self.weapon_controller = WeaponController(self, groups, enemy_sprites, 
                         obstacle_sprites, resource_manager)
+        
+        # 悬浮武器组
+        self.floating_weapons = pygame.sprite.Group()
+        self.visual_weapon_cache = [] # 记录当前显示的武器ID列表，防止每帧重建
+
+    def update_floating_weapons(self):
+        """
+        检查武器列表变化，更新悬浮显示
+        """
+        current_ids = self.weapon_controller.equipped_weapons
+        # 只关心发射型武器 (projectile)
+        proj_ids = []
+        for w_id in current_ids:
+            w_data = self.res.data['weapons'].get(w_id)
+            if w_data and w_data.get('type', 'projectile') == 'projectile':
+                proj_ids.append(w_id)
+        
+        # 如果列表没变，不处理
+        if proj_ids == self.visual_weapon_cache:
+            return
+        self.visual_weapon_cache = proj_ids.copy()
+        # 清空旧的
+        for s in self.floating_weapons: s.kill()
+        self.floating_weapons.empty()
+        # 重新生成
+        count = len(proj_ids)
+        if count == 0: return
+        
+        # 排列逻辑：均匀分布在玩家身后 (-45度 到 225度) 或者是 360度
+        step = 360 / count
+        for i, w_id in enumerate(proj_ids):
+            w_data = self.res.data['weapons'].get(w_id)
+            # 使用 ICON 图像
+            img = self.res.get_image(w_data['image'])
+            # 缩小一点
+            img = pygame.transform.scale(img, (24, 24))
+            
+            FloatingWeapon(
+                groups=[self.groups()[0], self.floating_weapons], # 加入 all_sprites 以便被绘制
+                image=img,
+                player=self,
+                angle_offset=i * step,
+                distance=40
+            )
 
     def input(self):
         """处理键盘输入"""
@@ -153,3 +234,6 @@ class Player(Entity):
         self.animate(dt) # [新增] 驱动动画
         self.move(dt)
         self.weapon_controller.update()
+        self.update_floating_weapons()
+        self.floating_weapons.update(dt) # 虽然 all_sprites 会 update 它们，但这不冲突
+

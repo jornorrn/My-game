@@ -3,21 +3,34 @@
         "id": 3001,
         "name": "Magic Wand",
         "type": "projectile",
-        "image": "icon_wand",
-        "effect": "bullet", 
+        "image": "wand",
+        "effect": "bullet3001", 
         "cooldown": 500,
         "damage": 10,
-        "speed": 400
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
     {
         "id": 3006,
         "name": "Guardian Orb",
         "type": "orbital",
-        "image": "blue_orb",
-        "effect": "vfx_orb_spike",
+        "image": "sword",
+        "effect": "sword",
         "cooldown": 300, 
         "damage": 15,
         "speed": 120, 
-        "data": { "radius": 100 }
+        "data": { "radius": 100, "scale": 1.5 }
+    },
+    {
+        "id": 3011,
+        "name": "Ice Zone",
+        "type": "aura",
+        "image": "blue_orb",
+        "effect": "blue_orbs",
+        "cooldown": 200, 
+        "damage": 5,
+        "speed": 15, 
+        "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
+                    "margin": 0, "radius": 120, "scale": 1.5 }
     }
 ]

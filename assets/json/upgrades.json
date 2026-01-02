@@ -19,8 +19,8 @@
     },
     {
         "id": 1003,
-        "title": "再来一把",
-        "desc": "多一把魔杖",
+        "title": "再来一根",
+        "desc": "同时使用两根风系魔杖",
         "image": "icon_wand",
         "tier": 2,
         "type": "weapon_add",
@@ -28,7 +28,7 @@
     },
     {
         "id": 1004,
-        "title": "生命药剂",
+        "title": "初级生命魔药",
         "desc": "回复30点生命值",
         "image": "bloodpotion1",
         "tier": 2,
@@ -37,20 +37,29 @@
     },
     {
         "id": 1005,
-        "title": "火焰附魔",
-        "desc": "攻击附着火焰，伤害增加",
-        "image": "icon_fire",
+        "title": "强化魔杖",
+        "desc": "风刃攻击范围更大，伤害增加",
+        "image": "upgrade_3001",
         "tier": 2,
         "type": "weapon_buff",
-        "data": {"attr": "damage", "value": 1.5, "mode": "mult", "target": "all"}
+        "data": {"attr": "damage", "value": 5, "mode": "add", "target": "all"}
     },
     {
         "id": 1006,
-        "title": "环绕冰魔法",
-        "desc": "对靠近角色的敌人造成伤害",
-        "image": "icon_wand",
+        "title": "飞剑",
+        "desc": "环绕角色，对触碰到的敌人造成伤害",
+        "image": "sword",
         "tier": 2,
         "type": "weapon_add",
         "data": {"weapon_id": 3006}
+    },
+    {
+        "id": 1007,
+        "title": "环绕冰魔法",
+        "desc": "对周围敌人造成伤害",
+        "image": "blue_orb",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3011}
     }
 ]

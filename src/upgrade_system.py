@@ -65,6 +65,18 @@ class WeaponBuffUpgrade(UpgradeOption): #type: weapon_upgrade
             if target != 'all' and str(w_id) != str(target):
                 continue
                 
+            # [新增] 支持修改 data 内部的字段 (如 scale, radius)
+            # Schema 示例: { "attr": "data.scale", "value": 0.5, "mode": "add" }
+            if attr.startswith('data.'):
+                sub_key = attr.split('.')[1]
+                target_dict = w_data.setdefault('data', {})
+                if sub_key in target_dict:
+                    if mode == 'add': target_dict[sub_key] += val
+                    elif mode == 'mult': target_dict[sub_key] *= val
+                else:
+                    # 如果没有该字段，初始化
+                    target_dict[sub_key] = val
+
             if attr in w_data:
                 if mode == 'add':
                     w_data[attr] += val
@@ -128,12 +140,26 @@ class UpgradeManager:
         print(f"[System] Upgrade Database built. Total options: {len(self.db)}")
 
     def get_random_options(self, level, amount=3):
-        """抽取不重复的卡片"""
-        valid_options = [opt for opt in self.db if opt.tier <= level]
+        """
+        抽取不重复的卡片
+        逻辑：
+        1. Tier <= Level (基本条件)
+        2. Level - Tier < Threshold (不显示太低级的)
+        """
+        threshold = 5 # 等级与tier差距范围
         
+        valid_options = []
+        for opt in self.db:
+            if opt.tier <= level:
+                if (level - opt.tier) < threshold:
+                    valid_options.append(opt)
+        
+        # 如果过滤太狠没选项了，就放宽限制
         if not valid_options:
-            print(f"[WARNING] No valid upgrades for level {level}")
+            valid_options = [opt for opt in self.db if opt.tier <= level]
+            
+        if not valid_options:
             return []
             
         k = min(amount, len(valid_options))
-        return random.sample(valid_options, k) 
+        return random.sample(valid_options, k)
