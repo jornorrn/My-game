@@ -100,16 +100,26 @@ class Game:
             self.all_sprites.update(dt)
             self.enemy_spawner(dt)
 
-            #死亡检测
             if self.player.is_dead:
                 self.state = 'GAME_OVER'
 
-            # 升级检测
+            # 升级逻辑
             if self.player.check_level_up():
                 print(f"--- LEVEL UP! Level: {self.player.level} ---")
-                # 为了测试扇形，无视 JSON，直接塞一把 ID 3001 的武器
-                self.player.weapon_controller.equipped_weapons.append(3001)
                 
+                # 1. 获取随机选项 (UpgradeManager 已保证不重复)
+                options = self.upgrade_manager.get_random_options(self.player.level, amount=3)
+                if options:
+                    # 2. 初始化 UI 卡片
+                    self.ui.setup_level_up(options)
+                    # 3. 切换状态
+                    self.state = 'LEVEL_UP'
+                else:
+                    print("[WARNING] No upgrades available!")
+                    
+        elif self.state == 'LEVEL_UP':
+            pass
+
         elif self.state == 'GAME_OVER':
             pass
 
@@ -137,7 +147,9 @@ class Game:
             self.ui.draw_pause()
         elif self.state == 'GAME_OVER':
             self.ui.draw_game_over()
-            
+        elif self.state == 'LEVEL_UP':
+            self.ui.draw_level_up()
+
         self.ui.draw_custom_cursor()
         pygame.display.update()
 
@@ -156,17 +168,25 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     # 传入当前 state，让 UI 判断检测哪组按钮
-                    action = self.ui.get_click_action(self.state)
-                    
-                    if action == 'resume':
-                        self.state = 'PLAYING'
-                    elif action == 'restart':
-                        self.reset_game()
-                    elif action == 'quit':
-                        self.running = False
-                    elif action == 'pause_game': # 处理右上角按钮
-                        if self.state == 'PLAYING':
-                            self.state = 'PAUSED'
+                    if self.state in ['PAUSED', 'GAME_OVER', 'PLAYING']:
+                        action = self.ui.get_click_action(self.state)
+                        if action == 'resume': self.state = 'PLAYING'
+                        elif action == 'restart': self.reset_game()
+                        elif action == 'quit': self.running = False
+                        elif action == 'pause_game': self.state = 'PAUSED'
+
+                    elif self.state == 'LEVEL_UP':
+                        selected_option = self.ui.get_level_up_choice()
+                        if selected_option:
+                            # 1. 应用效果
+                            print(f">> Selected Upgrade: {selected_option.title}")
+                            selected_option.apply(self.player)
+                            
+                            # 2. 刷新玩家射击状态 (防止卡住开火)
+                            # 简单的做法是重置按键状态标记，或者什么都不做
+                            # 因为 input() 是每帧检测的，只要状态回到 PLAYING，
+                            # 这里暂时只需恢复状态
+                            self.state = 'PLAYING'
 
     def run(self):
         while self.running:

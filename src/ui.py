@@ -72,6 +72,68 @@ class Button(UIElement):
         super().__init__(center_pos, self.surf_normal, self.surf_pressed, scale_on_hover=True)
         self.action_name = action_name
 
+class UpgradeCard(UIElement):
+    """
+    升级选项卡片。
+    继承 UIElement 以获得鼠标悬停时的整体缩放效果。
+    """
+    def __init__(self, center_pos, size, bg_image, option_data, font_title, font_desc):
+        # 1. 准备卡片的基础 Surface (未缩放状态)
+        self.w, self.h = size
+        self.base_surface = pygame.transform.scale(bg_image, size)
+        self.option = option_data # 存储 UpgradeOption 对象
+        
+        # 2. 绘制静态内容到 base_surface 上 (Icon, Title, Desc)
+        # 这样缩放时，文字和图标会跟着背景一起缩放
+        
+        # A. 绘制图标 (居中，靠上)
+        # 假设 icon 是 32x32，放大一点显示 (比如 64x64)
+        if hasattr(option_data, 'icon_key'): # 确保有图片
+            # 这里需要回调 resource manager 获取图片，但为了解耦，
+            # 我们假设外部传进来的是已经获取好的 image surface，或者我们在 draw 时绘制
+            # 为了简单，我们在外部初始化时把 icon surface 传进来，或者暂时只存数据
+            pass
+
+        # 为了性能，我们将内容预渲染到 self.content_surface
+        self.content_surface = self.base_surface.copy()
+        
+        # 计算布局坐标 (相对于卡片左上角)
+        cx = self.w // 2
+        
+        # B. 绘制标题
+        title_surf = font_title.render(self.option.title, False, (50, 30, 30))
+        title_rect = title_surf.get_rect(center=(cx, self.h * 0.45)) # 放在中间偏上
+        self.content_surface.blit(title_surf, title_rect)
+        
+        # C. 绘制描述 (简单自动换行或多行绘制)
+        # 这里做简单处理：只画一行，如果太长可能需要额外逻辑
+        desc_surf = font_desc.render(self.option.description, False, (80, 80, 80))
+        desc_rect = desc_surf.get_rect(center=(cx, self.h * 0.65))
+        self.content_surface.blit(desc_surf, desc_rect)
+
+        # 初始化基类
+        # 注意：UIElement 默认接受 surface_normal。这里我们用预渲染好的 content_surface
+        super().__init__(center_pos, self.content_surface, scale_on_hover=True)
+
+    def draw_icon(self, icon_surf):
+        """额外方法：因为 icon 需要从 loader 获取，可能在 init 后绘制"""
+        # 将 icon 绘制到 content_surface 上 (覆盖原有)
+        # 重新生成 content_surface = base + icon + text
+        self.content_surface = self.base_surface.copy()
+        
+        # 1. Icon (放大显示)
+        icon_scaled = pygame.transform.scale(icon_surf, (64, 64))
+        icon_rect = icon_scaled.get_rect(center=(self.w // 2, self.h * 0.20))
+        self.content_surface.blit(icon_scaled, icon_rect)
+        
+        # 2. 重新把 original_image 指向包含 Icon 的图，以便 update 缩放逻辑生效
+        self.original_image = self.content_surface
+        self.hover_image = self.content_surface
+
+        # 3. 补回文字 (简略写法，实际应该把文字绘制也封装)
+        # 由于我们覆盖了 content_surface，这里为了省事，假设 icon 是最后画的
+        # 更好的做法是在 __init__ 里传 icon_surf
+        pass 
 
 class UI:
     """
@@ -85,16 +147,20 @@ class UI:
     def __init__(self, display_surface, resource_manager):
         self.display_surface = display_surface
         self.res = resource_manager
-        # 1. 字体
+        # 字体
         try:
             self.font = pygame.font.Font('assets/fonts/pixel.ttf', 24)
             self.title_font = pygame.font.Font('assets/fonts/pixel.ttf', 60)
             self.info_font = pygame.font.Font('assets/fonts/pixel.ttf', 30)
+            self.card_title_font = pygame.font.Font('assets/fonts/pixel.ttf', 32)
+            self.card_desc_font = pygame.font.Font('assets/fonts/pixel.ttf', 20)
         except:
             self.font = pygame.font.Font(None, 24)
             self.title_font = pygame.font.Font(None, 60)
             self.info_font = pygame.font.Font(None, 30)
-        # 2. 加载光标
+            self.card_title_font = pygame.font.Font(None, 40)
+            self.card_desc_font = pygame.font.Font(None, 24)
+        # 加载光标
         self.cursor_ptr = self.res.get_image('pointer') # 默认箭头
         self.cursor_hov = self.res.get_image('cursor')  # 悬停手势
         pygame.mouse.set_visible(False) # 隐藏系统光标
@@ -123,10 +189,14 @@ class UI:
         self.banner_h = WINDOW_HEIGHT // 5
         raw_banner_blue = self.res.get_image('ribbon_blue_3slides')
         raw_banner_red  = self.res.get_image('ribbon_red_3slides')
+        self.banner_yellow = self.res.get_image('ribbon_yellow_3slides')
         self.banner_blue = pygame.transform.scale(raw_banner_blue, (self.banner_w, self.banner_h))
         self.banner_red  = pygame.transform.scale(raw_banner_red, (self.banner_w, self.banner_h))
-
+        self.banner_yellow = pygame.transform.scale(self.banner_yellow, (self.banner_w, self.banner_h))
+        
+        self.card_bg = self.res.get_image('banner_slots')
         self._init_buttons()
+        self.level_up_cards = []
 
     def _init_buttons(self):
         """组装所有按钮"""
@@ -252,21 +322,98 @@ class UI:
     # ====================================================
     # 2. 升级选择 (状态: LEVEL_UP)
     # ====================================================
-    def draw_level_up(self, options):
+
+    def setup_level_up(self, options):
         """
-        绘制三选一窗口。
-        options: 包含 3 个升级数据的列表 (来自 JSON)
+        当升级发生时调用。接收 3 个 Option 数据，生成 3 个 Card 对象。
         """
-        # 清空上一帧的点击区域
-        self.current_ui_rects = []
+        self.level_up_cards = []
         
-        # 实现逻辑：
-        # 1. 绘制半透明黑色遮罩 (覆盖全屏)
-        # 2. 循环绘制 3 个卡片面板
-        #    - 从 option['image'] 获取图标 key -> self.res.get_image(key)
-        #    - 绘制标题、描述
-        #    - 将卡片的 Rect 添加到 self.current_ui_rects 列表中
-        pass
+        # 布局计算
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        
+        # 卡片大小：宽约为屏幕 1/5，高约为屏幕 3/5 (保持比例)
+        card_w = 260
+        card_h = 450
+        spacing = 40
+        total_w = 3 * card_w + 2 * spacing
+        start_x = cx - total_w // 2 + card_w // 2
+        
+        for i, opt in enumerate(options):
+            pos_x = start_x + i * (card_w + spacing)
+            pos_y = cy + 30 # 稍微靠下，留出上方 Banner 位置
+            
+            # 创建卡片
+            card = UpgradeCard(
+                center_pos=(pos_x, pos_y),
+                size=(card_w, card_h),
+                bg_image=self.card_bg,
+                option_data=opt,
+                font_title=self.card_title_font,
+                font_desc=self.card_desc_font
+            )
+            
+            # 注入 Icon (如果有)
+            if hasattr(opt, 'icon_key') and opt.icon_key:
+                icon_surf = self.res.get_image(opt.icon_key)
+                # 这是一个 Hack，手动把 Icon 画上去并刷新 texture
+                # 重新绘制流程：
+                final_surf = card.base_surface.copy()
+                
+                # 画 Icon
+                icon_scaled = pygame.transform.scale(icon_surf, (80, 80))
+                icon_rect = icon_scaled.get_rect(center=(card_w // 2, card_h * 0.25))
+                final_surf.blit(icon_scaled, icon_rect)
+                
+                # 画 Title
+                t_surf = self.card_title_font.render(opt.title, False, (60, 40, 40))
+                t_rect = t_surf.get_rect(center=(card_w // 2, card_h * 0.55))
+                final_surf.blit(t_surf, t_rect)
+                
+                # 画 Desc (简单折行处理：如果太长手动切一下，这里暂做单行)
+                d_surf = self.card_desc_font.render(opt.description, False, (100, 80, 80))
+                d_rect = d_surf.get_rect(center=(card_w // 2, card_h * 0.70))
+                final_surf.blit(d_surf, d_rect)
+                
+                card.original_image = final_surf
+                card.hover_image = final_surf # 悬停时不换图，只缩放
+            
+            self.level_up_cards.append(card)
+
+    def draw_level_up(self):
+        # 1. 遮罩
+        self.display_surface.blit(self.mask, (0, 0))
+        
+        # 2. 顶部 Banner
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        banner_rect = self.banner_yellow.get_rect(center=(cx, 80)) # 顶部
+        self.display_surface.blit(self.banner_yellow, banner_rect)
+        
+        # Banner 文字 "Level UP"
+        title_surf = self.title_font.render("Level UP", False, (80, 50, 20))
+        title_rect = title_surf.get_rect(center=(cx, 75))
+        self.display_surface.blit(title_surf, title_rect)
+        
+        # 3. 底部提示文字
+        info_surf = self.info_font.render("Click To Choose Your Reward", False, (255, 255, 255))
+        info_rect = info_surf.get_rect(center=(cx, WINDOW_HEIGHT - 50))
+        self.display_surface.blit(info_surf, info_rect)
+        
+        # 4. 绘制卡片
+        mouse_pos = pygame.mouse.get_pos()
+        for card in self.level_up_cards:
+            card.update(mouse_pos)
+            card.draw(self.display_surface)
+
+    def get_level_up_choice(self):
+        """检测升级界面点击，返回选中的 UpgradeOption"""
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()
+        
+        for card in self.level_up_cards:
+            if card.check_click(mouse_pos, mouse_pressed):
+                return card.option
+        return None
 
     # ====================================================
     # 3. 暂停菜单 (状态: PAUSED)

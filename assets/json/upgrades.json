@@ -2,20 +2,20 @@
     {
         "id": 1001,
         "title": "移速",
-        "desc": "移动速度提升 10%",
+        "desc": "移动速度提升 20%",
         "image": "icon_boots", 
         "tier": 1,
         "type": "stat",
-        "data": { "attr": "speed", "value": 1.1, "mode": "mult" }
+        "data": { "attr": "speed", "value": 1.2, "mode": "mult" }
     },
     {
         "id": 1002,
         "title": "吸血",
-        "desc": "击杀敌人回复 1 点生命",
+        "desc": "每击杀 1 个敌人回复 1 点生命",
         "image": "icon_vampire",
         "tier": 2,
         "type": "special",
-        "data": { "effect": "life_steal", "value": 1 }
+        "data": {"key": "magnet", "value": true}
     },
     {
         "id": 1003,
@@ -23,7 +23,25 @@
         "desc": "多一把魔杖",
         "image": "icon_vampire",
         "tier": 2,
-        "type": "special",
-        "data": { "effect": "life_steal", "value": 1 }
+        "type": "weapon_add",
+        "data": {"weapon_id": 3002}
+    },
+    {
+        "id": 1004,
+        "title": "生命药剂",
+        "desc": "回复30点生命值",
+        "image": "icon_health",
+        "tier": 2,
+        "type": "heal",
+        "data": {"amount": 30}
+    },
+    {
+        "id": 1003,
+        "title": "火焰附魔",
+        "desc": "魔杖攻击附着火焰魔法，伤害增加",
+        "image": "icon_fire",
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {"attr": "damage", "value": 5, "mode": "add", "target": "all"}
     }
 ]
