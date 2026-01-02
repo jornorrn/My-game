@@ -21,7 +21,7 @@
         "id": 1003,
         "title": "再来一把",
         "desc": "多一把魔杖",
-        "image": "icon_vampire",
+        "image": "icon_wand",
         "tier": 2,
         "type": "weapon_add",
         "data": {"weapon_id": 3002}
