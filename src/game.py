@@ -158,6 +158,21 @@ class Game:
                         self.state = 'PAUSED'
                     elif self.state == 'PAUSED':
                         self.state = 'PLAYING'
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: # 左键
+                    if self.state in ['PAUSED', 'GAME_OVER']:
+                        action = self.ui.get_click_action(self.state)
+                        
+                        if action == 'resume':
+                            self.state = 'PLAYING'
+                            
+                        elif action == 'restart':
+                            self.reset_game()
+                            # 注意：reset_game 会把 state 设为 PLAYING
+                            
+                        elif action == 'quit':
+                            self.running = False
 
     def run(self):
         while self.running:

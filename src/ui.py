@@ -1,6 +1,42 @@
 import pygame
 from src.settings import *
 
+class Button:
+    def __init__(self, x, y, image_normal, image_pressed, icon=None, action_name=None):
+        self.image_normal = image_normal
+        self.image_pressed = image_pressed
+        self.rect = self.image_normal.get_rect(center=(x, y))
+        self.icon = icon
+        self.action_name = action_name # 用于返回点击了什么功能
+        self.is_hovered = False
+        self.is_pressed = False
+
+    def check_hover(self, mouse_pos):
+        self.is_hovered = self.rect.collidepoint(mouse_pos)
+        return self.is_hovered
+
+    def check_click(self, mouse_pos, mouse_pressed):
+        # mouse_pressed[0] is Left Click
+        if self.rect.collidepoint(mouse_pos):
+            self.is_pressed = mouse_pressed[0]
+            return self.is_pressed
+        self.is_pressed = False
+        return False
+
+    def draw(self, surface):
+        # 根据状态切换图片
+        img = self.image_pressed if self.is_pressed else self.image_normal
+        surface.blit(img, self.rect)
+        
+        # 绘制图标 (居中叠加)
+        if self.icon:
+            icon_rect = self.icon.get_rect(center=self.rect.center)
+            # 如果按下了，图标稍微下沉一点点更有手感 (可选)
+            if self.is_pressed:
+                icon_rect.y += 2
+            surface.blit(self.icon, icon_rect)
+
+
 class UI:
     """
     UI 管理类。
@@ -35,7 +71,6 @@ class UI:
         self.mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.mask.fill((0, 0, 0))
         self.mask.set_alpha(150)
-
         # 大字体 (用于标题)
         try:
             self.title_font = pygame.font.Font('assets/fonts/pixel.ttf', 80)
@@ -43,6 +78,42 @@ class UI:
         except:
             self.title_font = pygame.font.Font(None, 100)
             self.info_font = pygame.font.Font(None, 50)
+
+    # 绘制暂停和死亡菜单及按钮准备
+        # 1. 加载 Banner
+        self.banner = self.res.get_image('ribbon_red_3slides') 
+        # 2. 加载按钮 (64x64)
+        btn_blue = self.res.get_image('button_blue')
+        btn_blue_p = self.res.get_image('button_blue_pressed')
+        btn_red = self.res.get_image('button_red')
+        btn_red_p = self.res.get_image('button_red_pressed')
+        # 3. 加载并缩放 Icon (200x200 -> 32x32)
+        def load_scale_icon(name):
+            img = self.res.get_image(name)
+            return pygame.transform.scale(img, (32, 32))
+        icon_resume = load_scale_icon('icon_resume') 
+        icon_restart = load_scale_icon('icon_restart')
+        icon_quit = load_scale_icon('icon_quit')
+        # 屏幕中心
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        # 按钮间距
+        btn_spacing = 80 
+        # 暂停菜单按钮组 (Resume, Restart, Quit)
+        self.pause_buttons = [
+            # 中间: Resume
+            Button(cx, cy + 20, btn_blue, btn_blue_p, icon_resume, 'resume'),
+            # 左边: Restart
+            Button(cx - btn_spacing, cy + 20, btn_blue, btn_blue_p, icon_restart, 'restart'),
+            # 右边: Quit
+            Button(cx + btn_spacing, cy + 20, btn_red, btn_red_p, icon_quit, 'quit')
+        ]
+        # 死亡菜单按钮组 (Restart, Quit)
+        self.death_buttons = [
+            # 左边: Restart
+            Button(cx - 40, cy + 20, btn_blue, btn_blue_p, icon_restart, 'restart'),
+            # 右边: Quit
+            Button(cx + 40, cy + 20, btn_red, btn_red_p, icon_quit, 'quit')
+        ]
 
     # 1. 战斗 HUD (状态: PLAYING)   
     def draw_bar(self, x, y, current, max_val, target_width=300):
@@ -82,10 +153,6 @@ class UI:
         self.display_surface.blit(txt_surf, txt_rect)
 
     def draw_hud(self, player):
-        # [新增] 每一秒打印一次，确认是否被调用
-        if pygame.time.get_ticks() % 1000 < 16:
-            print("[UI DEBUG] Drawing HUD...")
-        # 确保 target_width 足够宽
         self.draw_bar(20, 20, player.current_hp, player.stats['max_hp'], target_width=300)
     
     def draw_xp_text(self, level, xp):
@@ -123,43 +190,64 @@ class UI:
     # ====================================================
     # 3. 暂停菜单 (状态: PAUSED)
     # ====================================================
-    def draw_pause(self):
-        """
-        绘制暂停文字和按钮
-        """
-        # self.current_ui_rects = []
-        # 实现逻辑：
-        # 1. 绘制遮罩
+    def draw_menu_common(self, title_text, buttons):
+        """通用的菜单绘制逻辑"""
+        # 1. 遮罩
         self.display_surface.blit(self.mask, (0, 0))
-        # 2. 绘制标题 "PAUSED"
-        title_surf = self.title_font.render("PAUSED", False, (255, 255, 255))
-        title_rect = title_surf.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
+        
+        # 2. Banner (位于屏幕中心偏上)
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        banner_rect = self.banner.get_rect(center=(cx, cy - 80)) # 向上偏移
+        self.display_surface.blit(self.banner, banner_rect)
+        
+        # 3. 标题文字 (绘制在 Banner 内部)
+        # Banner 可用区域 110x44，我们需要把文字缩放或者选小号字体
+        # 这里用 info_font (40px) 应该刚好
+        title_surf = self.info_font.render(title_text, False, (50, 30, 30)) # 深褐色文字更有纸张感
+        # 稍微向上提一点以垂直居中于 Ribbon
+        title_rect = title_surf.get_rect(center=(banner_rect.centerx, banner_rect.centery - 5)) 
         self.display_surface.blit(title_surf, title_rect)
-        # 3. 绘制提示
-        info_surf = self.info_font.render("Press ESC to Resume", False, (200, 200, 200))
-        info_rect = info_surf.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50))
-        self.display_surface.blit(info_surf, info_rect)
-        pass
+        
+        # 4. 按钮交互与绘制
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()
+        
+        action = None
+        for btn in buttons:
+            btn.check_hover(mouse_pos)
+            # 仅仅在这里处理显示状态 (按下效果)，实际逻辑在 Game 里处理
+            # 或者我们可以简单点，在这里如果检测到松开鼠标就返回 Action
+            is_down = btn.check_click(mouse_pos, mouse_pressed)
+            btn.draw(self.display_surface)
+            
+        return action
 
-    # ====================================================
-    # 4. 游戏结束 (状态: GAME_OVER)
-    # ====================================================
+    def draw_pause(self):
+        # 绘制并返回当前被点击的按钮（如果有）
+        self.draw_menu_common("PAUSED", self.pause_buttons)
+
     def draw_game_over(self):
-        """
-        绘制死亡结算
-        """
-        # 实现逻辑：
-        # 1. 绘制遮罩 (可以换成红色遮罩增加压迫感，这里暂时用黑色)
-        self.display_surface.blit(self.mask, (0, 0))
-        # 2. 绘制标题 "YOU DIED" (红色)
-        title_surf = self.title_font.render("YOU DIED", False, (200, 50, 50))
-        title_rect = title_surf.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
-        self.display_surface.blit(title_surf, title_rect)
-        pass
+        self.draw_menu_common("YOU DIED", self.death_buttons)
+        
 
     # ====================================================
     # 交互入口 (Game.events 调用)
     # ====================================================
+    def get_click_action(self, state):
+        """专门处理点击事件，供 Game 类调用"""
+        mouse_pos = pygame.mouse.get_pos()
+        
+        target_buttons = []
+        if state == 'PAUSED':
+            target_buttons = self.pause_buttons
+        elif state == 'GAME_OVER':
+            target_buttons = self.death_buttons
+            
+        for btn in target_buttons:
+            if btn.rect.collidepoint(mouse_pos):
+                return btn.action_name
+        return None
+
     def process_click(self, mouse_pos, game_state):
         """
         处理鼠标点击事件。
