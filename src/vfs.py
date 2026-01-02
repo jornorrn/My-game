@@ -6,6 +6,19 @@ class VFXManager:
         self.groups = all_sprites_group
         # 预加载特效的序列帧 (从 ResourceManager 获取)
 
+    def slice_frames(sheet, frame_count, frame_w):
+        frames = []
+        sheet_w, sheet_h = sheet.get_size()
+        # 如果没指定 frame_w，自动计算
+        if frame_w <= 0: frame_w = sheet_w // frame_count
+        
+        for i in range(frame_count):
+            # 简单防越界
+            if i * frame_w >= sheet_w: break
+            rect = pygame.Rect(i * frame_w, 0, frame_w, sheet_h)
+            frames.append(sheet.subsurface(rect))
+        return frames
+
     def trigger(self, vfx_id, pos, target_sprite=None):
         """
         统一入口。

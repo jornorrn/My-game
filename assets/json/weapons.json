@@ -1,11 +1,23 @@
 [
     {
         "id": 3001,
-        "name": "魔杖",
-        "image": "projectile_magic",
-        "icon": "icon_wand", 
-        "cooldown": 400,
+        "name": "Magic Wand",
+        "type": "projectile",
+        "image": "icon_wand",
+        "effect": "bullet", 
+        "cooldown": 500,
         "damage": 10,
         "speed": 400
+    },
+    {
+        "id": 3006,
+        "name": "Guardian Orb",
+        "type": "orbital",
+        "image": "blue_orb",
+        "effect": "vfx_orb_spike",
+        "cooldown": 300, 
+        "damage": 15,
+        "speed": 120, 
+        "data": { "radius": 100 }
     }
 ]

@@ -27,7 +27,7 @@ COLORS = {
 LAYERS = {
     'ground': 0,
     'vfx_bottom': 1,   # 足迹、地面裂痕
-    'main': 2,         # 玩家、敌人、掉落物
+    'main': 2,         # 玩家、敌人
     'vfx_top': 3,      # 爆炸、伤害数字
     'ui': 4
 }

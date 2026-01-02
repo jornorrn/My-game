@@ -129,11 +129,10 @@ class UpgradeManager:
 
     def get_random_options(self, level, amount=3):
         """抽取不重复的卡片"""
-        # TODO: 这里可以加入 tier 过滤逻辑
-        # valid_options = [opt for opt in self.db if opt.tier <= level]
-        valid_options = self.db # 暂时全池抽取
+        valid_options = [opt for opt in self.db if opt.tier <= level]
         
         if not valid_options:
+            print(f"[WARNING] No valid upgrades for level {level}")
             return []
             
         k = min(amount, len(valid_options))
