@@ -103,22 +103,15 @@ class Game:
             #死亡检测
             if self.player.is_dead:
                 self.state = 'GAME_OVER'
-                self.death_timer = 0 # 重置计时
 
             # 升级检测
             if self.player.check_level_up():
                 print(f"--- LEVEL UP! Level: {self.player.level} ---")
-                # [强制修改] 为了测试扇形，无视 JSON，直接塞一把 ID 3001 的武器
-                print(f">> [DEBUG] Force adding Weapon 3001. Old count: {len(self.player.weapon_controller.equipped_weapons)}")
+                # 为了测试扇形，无视 JSON，直接塞一把 ID 3001 的武器
                 self.player.weapon_controller.equipped_weapons.append(3001)
-                print(f">> [DEBUG] New count: {len(self.player.weapon_controller.equipped_weapons)}")
                 
         elif self.state == 'GAME_OVER':
-            # [新增] 死亡倒计时逻辑
-            self.death_timer += dt
-            if self.death_timer >= 2.0: # 2秒后重启
-                print(">> Restarting Game...")
-                self.reset_game()
+            pass
 
     def reset_game(self):
         """[新增] 快速重置游戏状态"""
@@ -144,7 +137,8 @@ class Game:
             self.ui.draw_pause()
         elif self.state == 'GAME_OVER':
             self.ui.draw_game_over()
-        
+            
+        self.ui.draw_custom_cursor()
         pygame.display.update()
 
     def events(self):
@@ -160,19 +154,19 @@ class Game:
                         self.state = 'PLAYING'
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: # 左键
-                    if self.state in ['PAUSED', 'GAME_OVER']:
-                        action = self.ui.get_click_action(self.state)
-                        
-                        if action == 'resume':
-                            self.state = 'PLAYING'
-                            
-                        elif action == 'restart':
-                            self.reset_game()
-                            # 注意：reset_game 会把 state 设为 PLAYING
-                            
-                        elif action == 'quit':
-                            self.running = False
+                if event.button == 1:
+                    # 传入当前 state，让 UI 判断检测哪组按钮
+                    action = self.ui.get_click_action(self.state)
+                    
+                    if action == 'resume':
+                        self.state = 'PLAYING'
+                    elif action == 'restart':
+                        self.reset_game()
+                    elif action == 'quit':
+                        self.running = False
+                    elif action == 'pause_game': # 处理右上角按钮
+                        if self.state == 'PLAYING':
+                            self.state = 'PAUSED'
 
     def run(self):
         while self.running:
