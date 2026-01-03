@@ -161,27 +161,18 @@ class Orbital(GameSprite):
         # 1. 旋转位置计算
         self.angle += self.rot_speed * dt
         if self.angle >= 360: self.angle -= 360
-        
         # 简单的极坐标转换
         rad = math.radians(self.angle)
         offset_x = math.cos(rad) * self.radius
         offset_y = math.sin(rad) * self.radius
-        
         # 跟随玩家中心
         self.rect.centerx = self.player.rect.center[0] + offset_x
         self.rect.centery = self.player.rect.center[1] + offset_y
 
         # 动画更新 + 实时缩放
-        raw_img = self.anim_player.update(dt, loop=True)
-        if current_scale != 1.0:
-            w = int(raw_img.get_width() * current_scale)
-            h = int(raw_img.get_height() * current_scale)
-            self.image = pygame.transform.scale(raw_img, (w, h))
-        else:
-            self.image = raw_img
+        self.image = self.anim_player.get_frame_image(dt, loop=True, scale=current_scale)
         
-        # [新增] 动态更新 Hitbox (如果升级导致 scale 变化，hitbox 也要变)
-        # 假设判定范围就是图片大小
+        # 动态更新 Hitbox 
         self.rect = self.image.get_rect(center=self.rect.center)
         self.hitbox = self.rect.inflate(0, 0)
 
@@ -251,25 +242,16 @@ class Aura(GameSprite):
     def update(self, dt):
         self.rect.center = self.player.rect.center
         # 每一帧都从源数据读取最新的 Scale
-        # 这样 UpgradeSystem 修改了 json data 后，这里立刻生效
         target_scale = self.data_ref.get('scale', 1.0)
         self.current_scale = target_scale # 更新本地记录
         
         # 1. 图像处理
         if self.is_placeholder:
-            # 如果是占位符，如果缩放变了，需要重画（或者简单点，每帧重画）
-            # 为了性能，可以判断 scale 是否变化，这里简化为每帧重画确保正确
+            # 占位符每帧重画， 用于应对scale改变
             self.image = self._draw_placeholder_image()
         elif self.anim_player:
-            # 获取原始帧
-            raw_img = self.anim_player.update(dt, loop=True)
-            # 应用缩放
-            if target_scale != 1.0:
-                w = int(raw_img.get_width() * target_scale)
-                h = int(raw_img.get_height() * target_scale)
-                self.image = pygame.transform.scale(raw_img, (w, h))
-            else:
-                self.image = raw_img
+            # 使用 vfx 封装的方法，直接获取缩放后的图
+            self.image = self.anim_player.get_frame_image(dt, loop=True, scale=target_scale)
         
         # 2. 判定箱处理 (Visual 跟随 Scale, 判定也跟随 Scale)
         # 逻辑：判定半径 = 基础半径 * 缩放倍率

@@ -1,5 +1,6 @@
 import pygame
 import settings
+from src.settings import *
 
 def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
     """
@@ -89,6 +90,17 @@ class AnimationPlayer:
                     self.finished = True
         
         return self.frames[int(self.frame_index)]
+    
+    # 获取当前帧+缩放函数
+    def get_frame_image(self, dt, loop=True, scale=1.0):
+        raw_img = self.update(dt, loop)
+        if not raw_img: return None
+        
+        if scale != 1.0:
+            w = int(raw_img.get_width() * scale)
+            h = int(raw_img.get_height() * scale)
+            return pygame.transform.scale(raw_img, (w, h))
+        return raw_img
         
     def get_all_frames(self):
         """获取所有原始帧 (用于像子弹那样需要预先旋转的情况)"""
@@ -112,11 +124,61 @@ class VFXManager:
             self._create_explosion(pos)
         # ...
 
-    def _create_flash(self, sprite):
-        # 逻辑：生成一个纯白色的 mask surface，覆盖在 sprite 上
-        # 持续 0.1秒 后自动销毁
-        pass
+class FlashEffect(pygame.sprite.Sprite):
+    """受击闪白/闪红特效"""
+    def __init__(self, target_sprite, groups, duration=0.1):
+        super().__init__(groups)
+        self.target = target_sprite
+        self.z_layer = LAYERS['vfx_top']
+        self.duration = duration * 1000
+        self.start_time = pygame.time.get_ticks()
+        
+        # 复制图像, 创建mask，填充白色
+        self.image = pygame.Surface(self.target.image.get_size(), pygame.SRCALPHA)
+        mask = pygame.mask.from_surface(self.target.image)
+        mask_surf = mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
+        self.image = mask_surf
+        
+        self.rect = self.target.rect.copy()
+        self.hitbox = self.rect.copy() 
 
-    def _create_explosion(self, pos):
-        # 逻辑：实例化一个播放序列帧的 Sprite，播放完自动 kill()
-        pass
+    def update(self, dt):
+        # 跟随目标
+        if self.target.alive():
+            self.rect.center = self.target.rect.center
+            # 实时更新形状（适配动画）
+            self.image = pygame.Surface(self.target.image.get_size(), pygame.SRCALPHA)
+            mask = pygame.mask.from_surface(self.target.image)
+            self.image = mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
+            self.hitbox = self.rect.copy() # 同步 hitbox
+        else:
+            self.kill()
+
+        # 计时销毁
+        if pygame.time.get_ticks() - self.start_time > self.duration:
+            self.kill()
+
+class Explosion(pygame.sprite.Sprite):
+    """死亡/爆炸特效"""
+    def __init__(self, pos, groups, texture, frame_count=5, scale=2.0):
+        super().__init__(groups)
+        self.z_layer = LAYERS['vfx_top']
+        self.frames = slice_frames(texture, frame_count)
+        
+        # [新增] 预先缩放所有帧
+        if scale != 1.0:
+            self.frames = [pygame.transform.scale(f, (int(f.get_width()*scale), int(f.get_height()*scale))) for f in self.frames]
+
+        self.frame_index = 0
+        self.animation_speed = 20 # 播放速度快一点
+        self.image = self.frames[0]
+        self.rect = self.image.get_rect(center=pos)
+        self.hitbox = self.rect.copy() # 占位，避免报错
+
+    def update(self, dt):
+        self.frame_index += self.animation_speed * dt
+        if self.frame_index >= len(self.frames):
+            self.kill() # 播完自杀
+        else:
+            self.image = self.frames[int(self.frame_index)]
+

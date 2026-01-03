@@ -82,54 +82,144 @@ class Entity(GameSprite):
                     if self.direction.y < 0:
                         self.hitbox.top = sprite.hitbox.bottom
 
+class Shadow(pygame.sprite.Sprite):
+    """通用阴影类"""
+    def __init__(self, target_sprite, groups, shadow_surf):
+        # 阴影放在 vfx_bottom 层 (地板之上，物体之下)
+        super().__init__(groups)
+        self.target = target_sprite
+        self.image = shadow_surf
+        self.rect = self.image.get_rect()
+        self.z_layer = LAYERS['vfx_bottom']
+        # [修复] 添加 hitbox 防止 collision 检测报错
+        self.hitbox = self.rect 
+        self._update_pos()
+        
+        # 初始位置
+        self._update_pos()
+
+    def _update_pos(self):
+        # 阴影位于物体底部中心
+        self.rect.centerx = self.target.rect.centerx
+        # 稍微向下偏移一点，制造立体感
+        self.rect.centery = self.target.rect.bottom - 5
+
+    def update(self, dt):
+        if not self.target.alive():
+            self.kill()
+        else:
+            self._update_pos()
+
 class Tile(GameSprite):
     """
     地图图块类 (墙壁、地板、装饰物)
+    支持：高墙逻辑 (Hitbox只在底部)、自动生成阴影
     """
-    def __init__(self, pos, groups, sprite_type, surface=None):
-        # 如果没有传入图片，就画一个灰色方块
+    def __init__(self, pos, groups, sprite_type, surface, 
+                 shadow_surf=None, scale_to_width=None):
         super().__init__(groups, pos, z_layer=LAYERS['ground'])
         self.sprite_type = sprite_type
-        
+
+         # 1. 图像处理
         if surface:
-            self.image = surface
+            if scale_to_width:
+                # [新增] 高墙逻辑：按宽度比例缩放，保持纵横比
+                orig_w, orig_h = surface.get_size()
+                scale_factor = scale_to_width / orig_w
+                new_h = int(orig_h * scale_factor)
+                self.image = pygame.transform.smoothscale(surface, (scale_to_width, new_h))
+            else:
+                self.image = surface
         else:
             self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
-            if sprite_type == 'wall':
-                self.image.fill((100, 100, 100)) # 墙是深灰
-                self.z_layer = LAYERS['main']    # 墙和玩家同一层，参与遮挡
-            else:
-                self.image.fill((50, 50, 50))    # 地板是浅灰
-                self.z_layer = LAYERS['ground']  # 地板在最底层
-
+            self.image.fill((100, 100, 100))
+            
         self.rect = self.image.get_rect(topleft=pos)
-        # 如果是墙壁，hitbox 稍微缩小一点，如果是地板，不需要 hitbox (但为了统一先保留)
-        self.hitbox = self.rect.inflate(0, -10)
+        
+         # 2. 层级与碰撞箱处理
+        if sprite_type == 'wall' or sprite_type == 'tree':
+            self.z_layer = LAYERS['main'] # 参与遮挡排序
+            
+            # [核心逻辑] 处理“高物体”
+            # 如果图片高度大于 TILE_SIZE (比如 124px 的墙)，
+            # 我们认为它的“物理占地”只有最下面那一格 (32x32)
+            # 视觉上它会向上延伸
+            
+            # 重新调整 rect：让 rect 的底部对齐 pos 的底部
+            # 注意：传入的 pos 通常是 grid 坐标，即物体的左上角。
+            # 对于高物体，pos 应该是它“占地格子”的左上角。
+            
+            # 底部对齐逻辑
+            self.rect.bottomleft = (pos[0], pos[1] + TILE_SIZE)
+            
+            # 碰撞箱只取底部(32x32)
+            self.hitbox = pygame.Rect(self.rect.left, self.rect.bottom - TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            # 微调：稍微缩小一点方便移动
+            self.hitbox = self.hitbox.inflate(0, -10)
+            
+            # [新增] 生成阴影 (如果是树)
+            if sprite_type == 'tree' and shadow_surf:
+                Shadow(self, groups, shadow_surf)
+                
+        else:
+            # 地板、装饰物
+            self.z_layer = LAYERS['ground']
+            self.hitbox = self.rect # 地板不需要碰撞，但为了兼容性保留
+            
+            if sprite_type == 'deco':
+                # 装饰物也可以稍微有点遮挡关系，或者放在 ground 层
+                # 这里简单处理：放在 ground
+                pass
 
 class AnimatedTile(Tile):
     """支持序列帧动画的地块 (如水面、火海)"""
-    def __init__(self, pos, groups, sprite_type, surface, frame_data):
+    def __init__(self, pos, groups, sprite_type, surface, frame_data, 
+                 visual_scale=1.0, offset=(0,0)):
         # 初始化父类，先不传 image
         super().__init__(pos, groups, sprite_type, surface=None)
         
         # 使用通用动画播放器
         # frame_data 格式: {'frames': 16, 'frame_width': 192, 'speed': 10}
         self.anim_player = AnimationPlayer(surface, frame_data, default_speed=frame_data.get('speed', 5))
+        self.visual_scale = visual_scale
+        self.offset = offset # (x, y) 修正渲染位置
         
-        self.image = self.anim_player.frames[0]
-        # 如果素材比 TILE_SIZE 大，需要缩放吗？
-        # 这里假设水面素材如果是 192x192，我们把它缩放到 TILE_SIZE (64x64)
-        if self.image.get_width() != TILE_SIZE:
-             self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
-             
+        # 初始化第一帧 (dt=0)
+        self.image = self.anim_player.get_frame_image(0, loop=True, scale=self.visual_scale)
+        # 重新定位 Rect
+        # 注意：pos 是网格坐标 (32x32格子左上角)
+        # 如果素材很大(水面)，我们需要让素材中心 对齐 网格中心
+        self.rect = self.image.get_rect(center=(pos[0] + TILE_SIZE//2 + offset[0], 
+                                                pos[1] + TILE_SIZE//2 + offset[1]))
+        # 2. [核心逻辑] 定位 Rect 和 Hitbox
+        # pos: 网格左上角 (例如 320, 320)
+        # grid_bottom: 网格底部中心 (320+16, 320+32)
+        
+        # 先把 rect 放在 pos
         self.rect = self.image.get_rect(topleft=pos)
-        self.hitbox = self.rect.inflate(0, 0) # 或者是 (-10, -10)
+        
+        if sprite_type == 'tree':
+            self.z_layer = LAYERS['main']
+            
+            # [关键] 让图片的"底部中心"，对齐"网格的底部中心" + 偏移量
+            # 这样无论树多高、多宽，它的根部永远踩在格子里
+            grid_bottom_center_x = pos[0] + TILE_SIZE // 2 + offset[0]
+            grid_bottom_y = pos[1] + TILE_SIZE + offset[1]
+            
+            self.rect.midbottom = (grid_bottom_center_x, grid_bottom_y)
+            
+            # [关键] 判定箱：严格等于网格大小 (32x32)，位于 pos
+            # inflate(-10, -10) 让判定箱比格子稍小，手感更好
+            self.hitbox = pygame.Rect(pos[0], pos[1], TILE_SIZE, TILE_SIZE).inflate(-10, -10)
 
+        else:
+            # 默认逻辑 (居中)
+            self.rect = self.image.get_rect(center=(pos[0] + TILE_SIZE//2, pos[1] + TILE_SIZE//2))
+            self.z_layer = LAYERS['ground']
+            self.hitbox = self.rect
+            
     def update(self, dt):
-        # 播放动画
-        raw_frame = self.anim_player.update(dt, loop=True)
-        # 实时缩放以匹配地图网格
-        self.image = pygame.transform.scale(raw_frame, (TILE_SIZE, TILE_SIZE))
+        self.image = self.anim_player.get_frame_image(dt, loop=True, scale=self.visual_scale)
 
 class YSortCameraGroup(pygame.sprite.Group):
     """

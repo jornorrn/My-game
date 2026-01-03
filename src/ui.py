@@ -104,12 +104,40 @@ class UpgradeCard(UIElement):
         title_surf = font_title.render(self.option.title, False, (50, 30, 30))
         title_rect = title_surf.get_rect(center=(cx, self.h * 0.45)) # 放在中间偏上
         self.content_surface.blit(title_surf, title_rect)
+
+        # C. 绘制描述 (支持多行)
+        # 逻辑：手动计算文字宽度，如果超过卡片宽度就换行
+        max_width = self.w - 40 
+        text = self.option.description
+        lines = []
+        current_line = ""
         
-        # C. 绘制描述 (简单自动换行或多行绘制)
-        # 这里做简单处理：只画一行，如果太长可能需要额外逻辑
-        desc_surf = font_desc.render(self.option.description, False, (80, 80, 80))
-        desc_rect = desc_surf.get_rect(center=(cx, self.h * 0.65))
-        self.content_surface.blit(desc_surf, desc_rect)
+        for char in text:
+            # 试探性加上这个字符，计算宽度
+            test_line = current_line + char
+            w, h = font_desc.size(test_line)
+            
+            if w < max_width:
+                current_line = test_line
+            else:
+                # 超出了，把之前的存入，当前字符作为新行开始
+                lines.append(current_line)
+                current_line = char
+        
+        if current_line:
+            lines.append(current_line)
+            
+        # 限制最多显示 3 行
+        lines = lines[:3]
+        # 绘制行
+        line_height = font_desc.get_height() + 5
+        # 起始 Y 坐标
+        start_y = self.h * 0.65 
+        
+        for i, line in enumerate(lines):
+            desc_surf = font_desc.render(line, False, (80, 80, 80))
+            desc_rect = desc_surf.get_rect(center=(cx, start_y + i * line_height))
+            self.content_surface.blit(desc_surf, desc_rect)
 
         # 初始化基类
         # 注意：UIElement 默认接受 surface_normal。这里我们用预渲染好的 content_surface
@@ -467,17 +495,4 @@ class UI:
         for btn in target_buttons:
             if btn.check_click(mouse_pos, mouse_pressed):
                 return btn.action_name
-        return None
-
-    def process_click(self, mouse_pos, game_state):
-        """
-        处理鼠标点击事件。
-        返回: 被点击的对象的索引或 ID，如果没有点中则返回 None
-        """
-        if game_state == 'LEVEL_UP':
-            for index, rect in enumerate(self.current_ui_rects):
-                if rect.collidepoint(mouse_pos):
-                    return index # 返回选中了第几个卡片
-        
-        # 可以在这里扩展 PAUSE 菜单的按钮点击
         return None

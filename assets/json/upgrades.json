@@ -11,7 +11,7 @@
     {
         "id": 1002,
         "title": "吸血",
-        "desc": "每击杀 1 个敌人回复 1 点生命",
+        "desc": "每击杀 1 个敌人回复 1 点生命值",
         "image": "icon_vampire",
         "tier": 2,
         "type": "special",
@@ -20,7 +20,7 @@
     {
         "id": 1003,
         "title": "再来一根",
-        "desc": "同时使用两根风系魔杖",
+        "desc": "增加一根风系魔杖，可以同时使用多根魔杖",
         "image": "wand",
         "tier": 2,
         "type": "weapon_add",
@@ -38,12 +38,12 @@
     {
         "id": 1005,
         "title": "强化魔杖",
-        "desc": "风刃攻击范围更大，伤害增加",
+        "desc": "风刃攻击范围增加50%，伤害翻倍",
         "image": "upgrade_3001",
         "tier": 2,
         "type": "weapon_buff",
-        "data": {"effects":{"damage": 5,"data.scale": 0.5},
-                "mode": "add",
+        "data": {"effects":{"damage": 2,"data.scale": 1.5},
+                "mode": "mult",
                 "target": "3001"}
     },
     {
@@ -58,7 +58,7 @@
     {
         "id": 1007,
         "title": "环绕冰魔法",
-        "desc": "对周围敌人造成伤害",
+        "desc": "角色释放冰魔法，持续对周围敌人造成伤害",
         "image": "blue_orb",
         "tier": 2,
         "type": "weapon_add",

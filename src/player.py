@@ -3,6 +3,7 @@ import math
 from src.settings import *
 from src.components import Entity
 from src.weapon import WeaponController
+from src.vfx import FlashEffect
 
 class FloatingWeapon(pygame.sprite.Sprite):
     """纯装饰用的悬浮武器"""
@@ -59,6 +60,13 @@ class Player(Entity):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-4, -10) # 针对16x20的小人微调碰撞箱
         self.set_obstacles(obstacle_sprites)
+        # 生成阴影
+        shadow_img = self.res.get_image('shadows')
+        shadow_img = pygame.transform.scale(shadow_img, (24, 10))
+        shadow_img.set_alpha(100)
+        
+        from src.components import Shadow # 局部导入防循环，或放顶部
+        Shadow(self, groups, shadow_img)
 
         # 数值属性
         self.stats = {
@@ -223,6 +231,7 @@ class Player(Entity):
         self.current_hp -= amount
         self.last_hit_time = current_time
         print(f"[DEBUG] Player hit! HP: {self.current_hp}")
+        FlashEffect(self, [self.groups()[0]], duration=0.2)
 
         if self.current_hp <= 0:
             self.is_dead = True

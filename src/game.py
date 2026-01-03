@@ -39,40 +39,12 @@ class Game:
         )
         self.upgrade_manager = UpgradeManager(self.loader)
 
-        #self.setup_test_map()
-        
         self.spawn_timer = 0
         self.base_spawn_interval = 1200
 
         self.ui = UI(self.screen, self.loader) 
         
         self.state = 'PLAYING' 
-
-    #def setup_test_map(self):
-        # 生成 40x40 的大地图
-        #map_width = 40
-        #map_height = 40
-        
-        #for x in range(map_width):
-            #for y in range(map_height):
-                #pos = (x * TILE_SIZE, y * TILE_SIZE)
-                # 地板
-                #Tile(pos, [self.all_sprites], 'floor')
-                # 围墙
-                #if x == 0 or x == map_width - 1 or y == 0 or y == map_height - 1:
-                #    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
-                # 随机障碍物 
-                #elif random.random() < 0.01:
-                #    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
-
-        # 玩家放在地图中心
-        #self.player = Player(
-        #    pos=(map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2), 
-        #    groups=[self.all_sprites], 
-        #    obstacle_sprites=self.obstacle_sprites,
-        #    enemy_sprites=self.enemy_sprites,
-        #    resource_manager=self.loader
-        #)
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 
@@ -96,11 +68,23 @@ class Game:
             enemy_id = random.choice(available_enemies)
             
             # 随机坐标逻辑 (简单防卡死版)
-            for _ in range(10): # 尝试10次
-                x = random.randint(2 * TILE_SIZE, 38 * TILE_SIZE)
-                y = random.randint(2 * TILE_SIZE, 38 * TILE_SIZE)
+            # [修改] 限制生成范围在墙壁内侧
+            # 假设墙壁占了最外圈 (0 和 width-1)
+            # 所以生成范围是 1 到 width-2
+            # 并且为了安全，可以再向内缩一格
+            
+            min_x = 2 * TILE_SIZE
+            max_x = (self.map_manager.width - 2) * TILE_SIZE
+            min_y = 2 * TILE_SIZE
+            max_y = (self.map_manager.height - 2) * TILE_SIZE
+            
+            for _ in range(10): 
+                x = random.randint(min_x, max_x)
+                y = random.randint(min_y, max_y)
                 spawn_pos = pygame.math.Vector2(x, y)
-                if spawn_pos.distance_to(self.player.rect.center) > 500:
+                
+                # 距离检查
+                if spawn_pos.distance_to(self.player.rect.center) > 400:
                     Enemy((x, y), enemy_id, [self.all_sprites, self.enemy_sprites], 
                           self.obstacle_sprites, self.player, self.loader)
                     break
