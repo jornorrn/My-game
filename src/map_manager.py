@@ -103,9 +103,11 @@ class MapManager:
         
         # --- 实例化 ---
         
-        # 铺地板
-        for x in range(self.width - 1):
-            for y in range(self.height - 1):
+        # 铺地板 - 修复：铺满整个地图（包括边缘）
+        # 原代码使用 width-1 和 height-1，导致缺少最后一列和最后一行地板
+        # 修复为 width 和 height，确保铺满整个地图
+        for x in range(self.width):
+            for y in range(self.height):
                 pos = (x * TILE_SIZE, y * TILE_SIZE)
                 Tile(pos, [self.game.all_sprites], 'floor', surface=img_floor)
         

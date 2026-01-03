@@ -21,74 +21,13 @@ class Enemy(Entity):
         # 动画与图像
         img_key = data['image']
         full_image = resource_manager.get_image(img_key)
-        # #region agent log
-        import json
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "run1",
-            "hypothesisId": "D",
-            "location": "enemy.py:__init__",
-            "message": "Enemy image loaded",
-            "data": {
-                "enemy_id": enemy_id,
-                "enemy_name": data.get('name', 'unknown'),
-                "img_key": img_key,
-                "image_is_none": full_image is None,
-                "image_size": full_image.get_size() if full_image else None
-            },
-            "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-        }
-        try:
-            with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-        except: pass
-        # #endregion
 
         anim_data = data.get('data', {})
         self.scale = anim_data.get('scale', 1.0)
-        # #region agent log
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "run1",
-            "hypothesisId": "B",
-            "location": "enemy.py:__init__",
-            "message": "Animation data",
-            "data": {
-                "enemy_id": enemy_id,
-                "anim_data": anim_data,
-                "scale": self.scale
-            },
-            "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-        }
-        try:
-            with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-        except: pass
-        # #endregion
         self.anim_player = AnimationPlayer(full_image, anim_data, default_speed=8)
         
         # 初始化图像
         self.image = self.anim_player.get_frame_image(0, loop=True, scale=self.scale)
-        # #region agent log
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "run1",
-            "hypothesisId": "F",
-            "location": "enemy.py:__init__",
-            "message": "Initial image set",
-            "data": {
-                "enemy_id": enemy_id,
-                "image_is_none": self.image is None,
-                "image_size": self.image.get_size() if self.image else None,
-                "anim_frames_count": len(self.anim_player.frames) if hasattr(self.anim_player, 'frames') else 0
-            },
-            "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-        }
-        try:
-            with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-        except: pass
-        # #endregion
 
         # 生成阴影
         shadow_img = self.res.get_image('shadows')
@@ -150,31 +89,7 @@ class Enemy(Entity):
             self.direction = pygame.math.Vector2()
 
         # 2. 播放动画
-        new_image = self.anim_player.get_frame_image(dt, loop=True, scale=self.scale)
-        # #region agent log
-        import json
-        if new_image is None or (hasattr(self, 'image') and self.image is None):
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "C",
-                "location": "enemy.py:update",
-                "message": "Image is None in update",
-                "data": {
-                    "enemy_id": self.stats.get('id', 'unknown') if hasattr(self, 'stats') else 'unknown',
-                    "new_image_is_none": new_image is None,
-                    "old_image_is_none": self.image is None if hasattr(self, 'image') else True,
-                    "frame_index": int(self.anim_player.frame_index) if hasattr(self.anim_player, 'frame_index') else -1,
-                    "total_frames": len(self.anim_player.frames) if hasattr(self.anim_player, 'frames') else 0
-                },
-                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-            }
-            try:
-                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-            except: pass
-        # #endregion
-        self.image = new_image
+        self.image = self.anim_player.get_frame_image(dt, loop=True, scale=self.scale)
         
         # 3. 移动与碰撞伤害 (撞玩家)
         self.move(dt)

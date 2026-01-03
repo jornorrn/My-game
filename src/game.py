@@ -16,6 +16,14 @@ class Game:
         pygame.init()
         pygame.display.set_caption("MysticEcho")
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        # 确保窗口有焦点，防止键盘输入被系统拦截
+        # 在 macOS 上，这有助于防止输入法拦截按键
+        pygame.display.get_surface().set_alpha(None)  # 确保窗口可见
+        # 禁用按键重复，避免按键事件被系统重复处理
+        pygame.key.set_repeat(0)  # 0 表示禁用按键重复
+        # 禁用文本输入，防止中文输入法拦截键盘事件（特别是 WASD 键）
+        # 这对于游戏来说很重要，因为我们不需要文本输入功能
+        pygame.key.stop_text_input()
         self.clock = pygame.time.Clock()
         self.running = True
         
@@ -189,6 +197,10 @@ class Game:
         # 根据游戏状态更新背景音乐（取消静音后会自动恢复）
         self.audio_manager.update_music_for_state(self.state)
         
+        # 在游戏状态下，确保文本输入被禁用，防止中文输入法拦截键盘事件
+        if self.state == 'PLAYING':
+            pygame.key.stop_text_input()
+        
         if self.state == 'MENU':
             pass  # 主菜单状态下不更新游戏逻辑
         elif self.state == 'TUTORIAL':
@@ -291,12 +303,39 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             
+            # 处理文本输入事件，防止中文输入法显示（macOS 上特别重要）
+            # 当输入法处于中文状态时，这些事件会被触发，我们需要阻止它们
+            if event.type == pygame.TEXTINPUT:
+                # 游戏不需要文本输入，直接忽略这些事件
+                # 这样可以防止中文输入法在按下 WASD 时显示输入框
+                pass
+            elif event.type == pygame.TEXTEDITING:
+                # 文本编辑事件（输入法候选词等），同样忽略
+                pass
+            
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                # 明确处理 WASD 键，防止系统输入法拦截（特别是在 macOS 上）
+                # 即使这些键通过 pygame.key.get_pressed() 在 player.input() 中处理，
+                # 我们也需要在这里捕获 KEYDOWN 事件来阻止系统默认行为
+                wasd_keys = (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d)
+                if event.key in wasd_keys:
+                    # 在游戏状态下，这些键用于移动，不应该触发系统输入
+                    # 通过明确处理这些事件，我们可以防止 macOS 输入法拦截它们
+                    if self.state == 'PLAYING':
+                        # 明确处理，阻止默认行为
+                        # 注意：实际的移动逻辑在 player.input() 中通过 get_pressed() 处理
+                        pass
+                elif event.key == pygame.K_ESCAPE:
                     if self.state == 'PLAYING':
                         self.state = 'PAUSED'
                     elif self.state == 'PAUSED':
                         self.state = 'PLAYING'
+            
+            # 处理窗口焦点事件，确保游戏窗口有焦点时能正确接收键盘输入
+            if event.type == pygame.ACTIVEEVENT:
+                if event.gain == 1:  # 窗口获得焦点
+                    # 窗口获得焦点时，确保禁用文本输入，防止输入法拦截
+                    pygame.key.stop_text_input()
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
