@@ -3,7 +3,7 @@
         "id": 1001,
         "title": "移速",
         "desc": "移动速度提升 20%",
-        "image": "icon_boots", 
+        "image": "icon_speed", 
         "tier": 1,
         "type": "stat",
         "data": { "attr": "speed", "value": 1.2, "mode": "mult" }
@@ -19,9 +19,9 @@
     },
     {
         "id": 1003,
-        "title": "再来一根",
+        "title": "风系魔杖",
         "desc": "增加一根风系魔杖，可以同时使用多根魔杖",
-        "image": "wand",
+        "image": "wind_wand",
         "tier": 2,
         "type": "weapon_add",
         "data": {"weapon_id": 3001}
@@ -33,7 +33,7 @@
         "image": "bloodpotion1",
         "tier": 2,
         "type": "heal",
-        "data": {"amount": 30}
+        "data": {"amount": 15}
     },
     {
         "id": 1005,
@@ -48,20 +48,252 @@
     },
     {
         "id": 1006,
-        "title": "飞剑",
+        "title": "疾风飞剑",
         "desc": "环绕角色，对触碰到的敌人造成伤害",
-        "image": "sword",
+        "image": "wind_sword",
         "tier": 2,
         "type": "weapon_add",
         "data": {"weapon_id": 3006}
     },
     {
         "id": 1007,
-        "title": "环绕冰魔法",
-        "desc": "角色释放冰魔法，持续对周围敌人造成伤害",
+        "title": "环绕冰系魔法",
+        "desc": "释放冰阵魔法，持续对周围敌人造成伤害",
         "image": "blue_orb",
-        "tier": 2,
+        "tier": 5,
         "type": "weapon_add",
         "data": {"weapon_id": 3011}
+    },
+    {
+        "id": 1008,
+        "title": "环绕火系魔法",
+        "desc": "释放火环魔法，持续对周围敌人造成伤害",
+        "image": "red_orb",
+        "tier": 5,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3012}
+    },
+    {
+        "id": 1009,
+        "title": "环绕木系魔法",
+        "desc": "释放生命法阵，持续对周围敌人造成伤害",
+        "image": "green_orb",
+        "tier": 5,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3013}
+    },
+    {
+        "id": 1010,
+        "title": "环绕链刃",
+        "desc": "召唤环绕链刃，持续对周围敌人造成伤害",
+        "image": "blackcut_orb",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3014}
+    },
+    {
+        "id": 1011,
+        "title": "环绕魔刃",
+        "desc": "召唤环绕魔刃，持续对周围敌人造成伤害",
+        "image": "bluecut_orb",
+        "tier": 3,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3015}
+    },
+    {
+        "id": 1012,
+        "title": "冰系魔杖",
+        "desc": "增加一根冰系魔杖，可以同时使用多根魔杖",
+        "image": "ice_wand",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3005}
+    },
+    {
+        "id": 1013,
+        "title": "火系魔杖",
+        "desc": "增加一根火系魔杖，可以同时使用多根魔杖",
+        "image": "fire_wand",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3002}
+    },
+    {
+        "id": 1014,
+        "title": "木系魔杖",
+        "desc": "增加一根木系魔杖，可以同时使用多根魔杖",
+        "image": "life_wand",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3003}
+    },
+    {
+        "id": 1015,
+        "title": "雷系魔杖",
+        "desc": "增加一根雷系魔杖，可以同时使用多根魔杖",
+        "image": "light_wand",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3004}
+    },
+    {
+        "id": 1016,
+        "title": "大火系魔杖",
+        "desc": "增加一根大火系魔杖，可以同时使用多根魔杖",
+        "image": "bigfire_wand",
+        "tier": 5,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3016}
+    },
+    {
+        "id": 1017,
+        "title": "大冰系魔杖",
+        "desc": "增加一根大冰系魔杖，可以同时使用多根魔杖",
+        "image": "bigice_wand",
+        "tier": 5,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3017}
+    },
+    {
+        "id": 1019,
+        "title": "黄金弯刀",
+        "desc": "环绕角色，对触碰到的敌人造成伤害",
+        "image": "gold_sword",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3007}
+    },
+    {
+        "id": 1020,
+        "title": "寒冰飞剑",
+        "desc": "环绕角色，对触碰到的敌人造成伤害",
+        "image": "ice_sword",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3008}
+    },
+    {
+        "id": 1021,
+        "title": "流火飞剑",
+        "desc": "环绕角色，对触碰到的敌人造成伤害",
+        "image": "fire_sword",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3009}
+    },
+    {
+        "id": 1022,
+        "title": "黑金古刀",
+        "desc": "环绕角色，对触碰到的敌人造成伤害",
+        "image": "blackGold_sword",
+        "tier": 2,
+        "type": "weapon_add",
+        "data": {"weapon_id": 3010}
+    },
+    {
+        "id": 1023,
+        "title": "中级生命魔药",
+        "desc": "回复 30 点生命值",
+        "image": "bloodpotion2",
+        "tier": 3,
+        "type": "heal",
+        "data": {"amount": 30}
+    },
+    {
+        "id": 1024,
+        "title": "高级生命魔药",
+        "desc": "回复 50 点生命值",
+        "image": "bloodpotion3",
+        "tier": 5,
+        "type": "heal",
+        "data": {"amount": 50}
+    },
+    {
+        "id": 1025,
+        "title": "超级生命魔药",
+        "desc": "回复 100 点生命值",
+        "image": "bloodpotion4",
+        "tier": 8,
+        "type": "heal",
+        "data": {"amount": 100}
+    },
+    {
+        "id": 1026,
+        "title": "生命上限",
+        "desc": "生命上限增加 20 点",
+        "image": "icon_addhealth", 
+        "tier": 3,
+        "type": "stat",
+        "data": { "attr": "max_hp", "value": 20, "mode": "add" }
+    },
+    {
+        "id": 1033,
+        "title": "知识的力量",
+        "desc": "所有武器: 伤害 +30%",
+        "image": "icon_book", 
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "mult",
+            "effects": { "damage": 1.3 }
+        }
+    },
+    {
+        "id": 1034,
+        "title": "知识的熟练",
+        "desc": "所有武器: 冷却 -30%",
+        "image": "icon_book", 
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "mult",
+            "effects": { "cooldown": 1.3 }
+        }
+    },
+    {
+        "id": 1035,
+        "title": "知识的膨胀",
+        "desc": "所有武器: 体积 +30%",
+        "image": "icon_book", 
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "mult",
+            "effects": { "data.scale": 0.3, "data.radius": 10 }
+        }
+    },
+    {
+        "id": 1036,
+        "title": "大生命上限",
+        "desc": "生命上限增加 40 点",
+        "image": "icon_addhealth", 
+        "tier": 5,
+        "type": "stat",
+        "data": { "attr": "max_hp", "value": 40, "mode": "add" }
+    },
+    {
+        "id": 1037,
+        "title": "增伤祝福",
+        "desc": "所有武器: 伤害 +50%",
+        "image": "icon_bless", 
+        "tier": 5,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "mult",
+            "effects": { "damage": 1.5 }
+        }
+    },
+    {
+        "id": 1025,
+        "title": "巨型生命魔药",
+        "desc": "回复 150 点生命值",
+        "image": "bloodpotion5",
+        "tier": 10,
+        "type": "heal",
+        "data": {"amount": 150}
     }
 ]

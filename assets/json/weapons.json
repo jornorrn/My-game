@@ -1,9 +1,9 @@
 [
     {
         "id": 3001,
-        "name": "Magic Wand",
+        "name": "风系魔杖",
         "type": "projectile",
-        "image": "wand",
+        "image": "wind_wand",
         "effect": "bullet3001", 
         "cooldown": 500,
         "damage": 10,
@@ -11,11 +11,99 @@
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
     {
+        "id": 3002,
+        "name": "火系魔杖",
+        "type": "projectile",
+        "image": "fire_wand",
+        "effect": "bullet3002", 
+        "cooldown": 500,
+        "damage": 10,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
+    },
+    {
+        "id": 3003,
+        "name": "木系魔杖",
+        "type": "projectile",
+        "image": "life_wand",
+        "effect": "bullet3003", 
+        "cooldown": 500,
+        "damage": 10,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
+    },
+    {
+        "id": 3004,
+        "name": "雷系魔杖",
+        "type": "projectile",
+        "image": "light_wand",
+        "effect": "bullet3004", 
+        "cooldown": 500,
+        "damage": 10,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
+    },
+    {
+        "id": 3005,
+        "name": "冰系魔杖",
+        "type": "projectile",
+        "image": "ice_wand",
+        "effect": "bullet3005", 
+        "cooldown": 500,
+        "damage": 10,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
+    },
+    {
         "id": 3006,
-        "name": "Guardian Orb",
+        "name": "疾风飞剑",
         "type": "orbital",
-        "image": "sword",
-        "effect": "sword",
+        "image": "wind_sword",
+        "effect": "wind_sword",
+        "cooldown": 300, 
+        "damage": 15,
+        "speed": 120, 
+        "data": { "radius": 100, "scale": 1.5 }
+    },
+    {
+        "id": 3007,
+        "name": "黄金弯刀",
+        "type": "orbital",
+        "image": "gold_sword",
+        "effect": "gold_sword",
+        "cooldown": 300, 
+        "damage": 15,
+        "speed": 120, 
+        "data": { "radius": 100, "scale": 1.5 }
+    },
+    {
+        "id": 3008,
+        "name": "寒冰飞剑",
+        "type": "orbital",
+        "image": "ice_sword",
+        "effect": "ice_sword",
+        "cooldown": 300, 
+        "damage": 15,
+        "speed": 120, 
+        "data": { "radius": 100, "scale": 1.5 }
+    },
+    {
+        "id": 3009,
+        "name": "流火飞剑",
+        "type": "orbital",
+        "image": "fire_sword",
+        "effect": "fire_sword",
+        "cooldown": 300, 
+        "damage": 15,
+        "speed": 120, 
+        "data": { "radius": 100, "scale": 1.5 }
+    },
+    {
+        "id": 3010,
+        "name": "黑金古刀",
+        "type": "orbital",
+        "image": "blackGold_sword",
+        "effect": "blackGold_sword",
         "cooldown": 300, 
         "damage": 15,
         "speed": 120, 
@@ -23,14 +111,85 @@
     },
     {
         "id": 3011,
-        "name": "Ice Zone",
+        "name": "环绕冰系魔法",
         "type": "aura",
         "image": "blue_orb",
         "effect": "blue_orbs",
         "cooldown": 500, 
+        "damage": 15,
+        "speed": 15, 
+        "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
+                    "margin": 0, "radius": 40, "scale": 4 }
+    },
+    {
+        "id": 3012,
+        "name": "环绕火系魔法",
+        "type": "aura",
+        "image": "red_orb",
+        "effect": "red_orbs",
+        "cooldown": 500, 
+        "damage": 15,
+        "speed": 15, 
+        "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
+                    "margin": 0, "radius": 40, "scale": 4 }
+    },
+    {
+        "id": 3013,
+        "name": "环绕木系魔法",
+        "type": "aura",
+        "image": "green_orb",
+        "effect": "green_orbs",
+        "cooldown": 500, 
+        "damage": 15,
+        "speed": 15, 
+        "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
+                    "margin": 0, "radius": 40, "scale": 4 }
+    },
+    {
+        "id": 3014,
+        "name": "环绕链刃",
+        "type": "aura",
+        "image": "blackcut_orb",
+        "effect": "blackcut_orbs",
+        "cooldown": 500, 
         "damage": 5,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
-                    "margin": 0, "radius": 40, "scale": 3 }
+                    "margin": 0, "radius": 50, "scale": 5 }
+    },
+    {
+        "id": 3015,
+        "name": "环绕魔刃",
+        "type": "aura",
+        "image": "bluecut_orb",
+        "effect": "bluecut_orbs",
+        "cooldown": 500, 
+        "damage": 10,
+        "speed": 15, 
+        "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
+                    "margin": 0, "radius": 50, "scale": 5 }
+    },
+    {
+        "id": 3016,
+        "name": "大火系魔杖",
+        "type": "projectile",
+        "image": "bigfire_wand",
+        "effect": "bullet3007", 
+        "cooldown": 500,
+        "damage": 30,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1.5 } 
+    },
+    {
+        "id": 3017,
+        "name": "大冰系魔杖",
+        "type": "projectile",
+        "image": "bigice_wand",
+        "effect": "bullet3008", 
+        "cooldown": 500,
+        "damage": 30,
+        "speed": 400,
+        "data": { "frames": 4, "frame_width": 32, "scale": 1.5 } 
     }
+
 ]
