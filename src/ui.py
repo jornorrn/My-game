@@ -243,9 +243,9 @@ class UI:
         self.fill_offset_y = 12
 
         # 创建半透明遮罩 (黑色，透明度 150/255)
-        self.mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.mask.fill((0, 0, 0))
-        self.mask.set_alpha(150)
+        # 使用 SRCALPHA 模式支持透明度，确保底层游戏内容可见
+        self.mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self.mask.fill((0, 0, 0, 150))  # 黑色半透明遮罩，透明度150/255
 
         # 加载 Banner
         self.banner_w = WINDOW_WIDTH // 3
