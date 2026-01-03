@@ -264,10 +264,10 @@ class UI:
         # 加载新手引导图片
         self.guide_image = self.res.get_image('guide')
         
-        # 创建灰色半透明遮罩（用于教程，能看到游戏画面）
-        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.tutorial_mask.fill((100, 100, 100))  # 灰色
-        self.tutorial_mask.set_alpha(180)  # 透明度
+        # 创建半透明遮罩（用于教程，能看到游戏画面）
+        # 使用更暗的颜色，这样即使底层是黑色背景，也不会太明显
+        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self.tutorial_mask.fill((0, 0, 0, 180))  # 黑色半透明遮罩，透明度180/255
         
         # 加载主菜单背景图片
         self.menu_bg = self.res.get_image('cover')
@@ -613,7 +613,8 @@ class UI:
     # ====================================================
     def draw_tutorial(self):
         """绘制新手引导教程"""
-        # 1. 绘制灰色半透明遮罩（能看到游戏画面）
+        # 1. 绘制半透明遮罩（能看到游戏画面）
+        # 使用 SRCALPHA 模式的 Surface 可以直接支持透明度
         self.display_surface.blit(self.tutorial_mask, (0, 0))
         
         # 2. 居中显示 guide.png

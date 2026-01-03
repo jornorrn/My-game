@@ -78,6 +78,12 @@ class MapManager:
         # --- 1. 素材准备与切割 ---
         img_floor = res.get_image('tile_grass')
         img_wall = res.get_image('tile_wall')
+        
+        # 调试：检查地板图片是否正确加载
+        if img_floor is None:
+            print("[ERROR] tile_grass image not loaded!")
+        else:
+            print(f"[DEBUG] tile_grass loaded: {img_floor.get_size()}")
             
         # 装饰列表 (扫描所有 deco_ 开头的)
         deco_images = []
@@ -106,10 +112,13 @@ class MapManager:
         # 铺地板 - 修复：铺满整个地图（包括边缘）
         # 原代码使用 width-1 和 height-1，导致缺少最后一列和最后一行地板
         # 修复为 width 和 height，确保铺满整个地图
+        floor_count = 0
         for x in range(self.width):
             for y in range(self.height):
                 pos = (x * TILE_SIZE, y * TILE_SIZE)
                 Tile(pos, [self.game.all_sprites], 'floor', surface=img_floor)
+                floor_count += 1
+        print(f"[DEBUG] Created {floor_count} floor tiles")
         
         # 生成物件
         for coords, type_name in self.grid.items():

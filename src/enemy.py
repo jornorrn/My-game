@@ -40,6 +40,10 @@ class Enemy(Entity):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
         self.resistance = 3
+        
+        # [优化] 更新频率控制（根据距离玩家远近）
+        self.update_frame_skip = 1  # 每帧更新
+        self.frame_count = 0  # 帧计数器
     
     def _check_out_of_bounds(self):
         """
@@ -79,19 +83,36 @@ class Enemy(Entity):
             self.die(give_xp=False)  # 墙外死亡不给予经验值
             return  # 死亡后不再执行后续逻辑
         
-        # 1. 计算指向玩家的向量
+        # [优化] 根据距离玩家远近决定更新频率
         enemy_vec = pygame.math.Vector2(self.rect.center)
         player_vec = pygame.math.Vector2(self.player.rect.center)
+        distance_sq = (player_vec - enemy_vec).length_squared()
+        distance = distance_sq ** 0.5
+        
+        # 根据距离设置更新频率
+        if distance > 800:  # 远离玩家（>800像素）
+            self.update_frame_skip = 3  # 每3帧更新一次
+        elif distance > 400:  # 中等距离（400-800像素）
+            self.update_frame_skip = 2  # 每2帧更新一次
+        else:  # 近距离（<400像素）
+            self.update_frame_skip = 1  # 每帧更新
+        
+        # 只在需要时更新（根据更新频率）
+        self.frame_count += 1
+        should_update = (self.frame_count % self.update_frame_skip == 0)
+        
+        # 1. 计算指向玩家的向量（总是更新，确保敌人能追踪玩家）
         diff = player_vec - enemy_vec
         if diff.magnitude() > 0:
             self.direction = diff.normalize()
         else:
             self.direction = pygame.math.Vector2()
 
-        # 2. 播放动画
-        self.image = self.anim_player.get_frame_image(dt, loop=True, scale=self.scale)
+        # 2. 播放动画（根据更新频率）
+        if should_update:
+            self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
         
-        # 3. 移动与碰撞伤害 (撞玩家)
+        # 3. 移动与碰撞伤害 (撞玩家) - 总是更新，确保碰撞检测准确
         self.move(dt)
         if self.hitbox.colliderect(self.player.hitbox):
             self.player.take_damage(self.stats['damage'])

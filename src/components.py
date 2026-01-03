@@ -285,11 +285,14 @@ class YSortCameraGroup(pygame.sprite.Group):
 
         # 3. 分层绘制，所有层都应用视锥剔除
         
-        # 3.1 地板层 (Ground)
+        # 3.1 地板层 (Ground) - 修复：确保地板能覆盖整个屏幕
+        # 对于地板层，暂时禁用视锥剔除，确保所有地板都能被绘制
+        # 这样可以避免因为视锥剔除导致背景显示为黑色
         for sprite in ground_sprites:
             offset_pos = sprite.rect.topleft - self.offset
-            if self._is_visible(offset_pos, sprite):
-                self.display_surface.blit(sprite.image, offset_pos)
+            # 暂时不进行视锥剔除，直接绘制所有地板
+            # 这样可以确保屏幕范围内都有地板显示
+            self.display_surface.blit(sprite.image, offset_pos)
 
         # 3.2 底层特效 (vfx_bottom) - 光环、脚印、阴影
         for sprite in vfx_bottom_sprites:

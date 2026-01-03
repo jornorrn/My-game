@@ -65,6 +65,10 @@ class AnimationPlayer:
         self.frame_index = 0
         self.animation_speed = default_speed
         self.finished = False # 是否播放完毕 (用于非循环动画)
+        
+        # [优化] 缩放缓存：缓存不同 scale 值对应的缩放结果
+        # 格式: {(frame_index, scale): scaled_surface}
+        self.scale_cache = {}
 
     def update(self, dt, loop=True):
         """
@@ -100,11 +104,32 @@ class AnimationPlayer:
         raw_img = self.update(dt, loop)
         if not raw_img: return None
         
-        if scale != 1.0:
-            w = int(raw_img.get_width() * scale)
-            h = int(raw_img.get_height() * scale)
-            return pygame.transform.scale(raw_img, (w, h))
-        return raw_img
+        # [优化] 如果不需要缩放，直接返回原图
+        if scale == 1.0:
+            return raw_img
+        
+        # [优化] 使用缓存避免重复缩放
+        frame_idx = int(self.frame_index)
+        cache_key = (frame_idx, scale)
+        
+        if cache_key in self.scale_cache:
+            return self.scale_cache[cache_key]
+        
+        # 缓存未命中，执行缩放并缓存
+        w = int(raw_img.get_width() * scale)
+        h = int(raw_img.get_height() * scale)
+        scaled_img = pygame.transform.scale(raw_img, (w, h))
+        
+        # [优化] 限制缓存大小，避免内存占用过大
+        # 只保留最近使用的 50 个缓存项
+        if len(self.scale_cache) > 50:
+            # 删除最旧的缓存项（简单策略：清空一半）
+            keys_to_remove = list(self.scale_cache.keys())[:25]
+            for key in keys_to_remove:
+                del self.scale_cache[key]
+        
+        self.scale_cache[cache_key] = scaled_img
+        return scaled_img
         
     def get_all_frames(self):
         """获取所有原始帧 (用于像子弹那样需要预先旋转的情况)"""

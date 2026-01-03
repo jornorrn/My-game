@@ -111,13 +111,27 @@ class Projectile(GameSprite):
                 self.kill()
                 return
 
-        # 撞人检测
-        hits = pygame.sprite.spritecollide(self, self.enemy_sprites, False, lambda s, e: s.hitbox.colliderect(e.hitbox))
-        for enemy in hits:
-            if hasattr(enemy, 'take_damage'):
-                enemy.take_damage(self.damage)
-            self.kill()
-            return
+        # 撞人检测 [优化] 使用距离预过滤减少碰撞检测次数
+        # 先进行粗略的距离检查，只对附近的敌人进行精确碰撞检测
+        bullet_pos = pygame.math.Vector2(self.hitbox.center)
+        nearby_enemies = []
+        max_check_distance = 100  # 最大检测距离（像素）
+        
+        for enemy in self.enemy_sprites:
+            enemy_pos = pygame.math.Vector2(enemy.rect.center)
+            distance_sq = (bullet_pos - enemy_pos).length_squared()
+            if distance_sq <= max_check_distance * max_check_distance:
+                nearby_enemies.append(enemy)
+        
+        # 只对附近的敌人进行精确碰撞检测
+        if nearby_enemies:
+            hits = pygame.sprite.spritecollide(self, pygame.sprite.Group(nearby_enemies), 
+                                              False, lambda s, e: s.hitbox.colliderect(e.hitbox))
+            for enemy in hits:
+                if hasattr(enemy, 'take_damage'):
+                    enemy.take_damage(self.damage)
+                self.kill()
+                return
 
         # 射程检测
         if self.distance_traveled > self.range:
@@ -176,21 +190,33 @@ class Orbital(GameSprite):
         self.rect = self.image.get_rect(center=self.rect.center)
         self.hitbox = self.rect.inflate(0, 0)
 
-        # 伤害判定 (基于时间间隔)
+        # 伤害判定 (基于时间间隔) [优化] 使用距离预过滤
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
-            # 检测碰撞
-            hits = pygame.sprite.spritecollide(self, self.enemy_sprites, False, 
-                                               lambda s, e: s.hitbox.colliderect(e.hitbox))
+            # [优化] 先进行距离预过滤
+            orbital_pos = pygame.math.Vector2(self.rect.center)
+            max_check_distance = self.radius + 50  # 检测半径 + 缓冲
+            nearby_enemies = []
             
-            if hits:
-                # 对碰到的所有敌人生效
-                for enemy in hits:
-                    if hasattr(enemy, 'take_damage'):
-                        enemy.take_damage(self.damage)
+            for enemy in self.enemy_sprites:
+                enemy_pos = pygame.math.Vector2(enemy.rect.center)
+                distance_sq = (orbital_pos - enemy_pos).length_squared()
+                if distance_sq <= max_check_distance * max_check_distance:
+                    nearby_enemies.append(enemy)
+            
+            # 只对附近的敌人进行精确碰撞检测
+            if nearby_enemies:
+                hits = pygame.sprite.spritecollide(self, pygame.sprite.Group(nearby_enemies), 
+                                                  False, lambda s, e: s.hitbox.colliderect(e.hitbox))
                 
-                # 重置计时器 (造成一次伤害后进入冷却)
-                self.attack_timer = current_time
+                if hits:
+                    # 对碰到的所有敌人生效
+                    for enemy in hits:
+                        if hasattr(enemy, 'take_damage'):
+                            enemy.take_damage(self.damage)
+                    
+                    # 重置计时器 (造成一次伤害后进入冷却)
+                    self.attack_timer = current_time
 
 class Aura(GameSprite):
     def __init__(self, player, groups, enemy_sprites, weapon_data):
@@ -267,14 +293,28 @@ class Aura(GameSprite):
         
         self.hitbox.center = self.rect.center
         
-        # 3. 伤害逻辑
+        # 3. 伤害逻辑 [优化] 使用距离预过滤
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
-            hits = pygame.sprite.spritecollide(self, self.enemy_sprites, False, 
-                                               lambda s, e: s.hitbox.colliderect(e.hitbox))
-            for enemy in hits:
-                if hasattr(enemy, 'take_damage'): enemy.take_damage(self.damage)
-            self.attack_timer = current_time
+            # [优化] 先进行距离预过滤
+            aura_pos = pygame.math.Vector2(self.rect.center)
+            max_check_distance = current_radius + 50  # 检测半径 + 缓冲
+            nearby_enemies = []
+            
+            for enemy in self.enemy_sprites:
+                enemy_pos = pygame.math.Vector2(enemy.rect.center)
+                distance_sq = (aura_pos - enemy_pos).length_squared()
+                if distance_sq <= max_check_distance * max_check_distance:
+                    nearby_enemies.append(enemy)
+            
+            # 只对附近的敌人进行精确碰撞检测
+            if nearby_enemies:
+                hits = pygame.sprite.spritecollide(self, pygame.sprite.Group(nearby_enemies), 
+                                                  False, lambda s, e: s.hitbox.colliderect(e.hitbox))
+                for enemy in hits:
+                    if hasattr(enemy, 'take_damage'): 
+                        enemy.take_damage(self.damage)
+                self.attack_timer = current_time
 
 class WeaponController:
     def __init__(self, player, groups, enemy_sprites, obstacle_sprites, resource_manager):
