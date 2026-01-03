@@ -190,8 +190,7 @@ class UpgradeManager:
         valid_options = []
         for opt in self.db:
             if opt.tier <= level:
-                if (level - opt.tier) < threshold:
-                    valid_options.append(opt)
+                valid_options.append(opt)
         
         # 如果过滤太狠没选项了，就放宽限制
         if not valid_options:
