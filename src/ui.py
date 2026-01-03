@@ -71,6 +71,29 @@ class Button(UIElement):
             
         super().__init__(center_pos, self.surf_normal, self.surf_pressed, scale_on_hover=True)
         self.action_name = action_name
+        self.bg_normal = bg_normal
+        self.bg_pressed = bg_pressed
+        self.current_icon = icon
+    
+    def update_icon(self, icon):
+        """更新按钮图标"""
+        self.current_icon = icon
+        # 重新合成图标到背景上
+        self.surf_normal = self.bg_normal.copy()
+        self.surf_pressed = self.bg_pressed.copy()
+        
+        if icon:
+            # 将 Icon 居中绘制到按钮背景上
+            icon_rect = icon.get_rect(center=(self.bg_normal.get_width()//2, self.bg_normal.get_height()//2 - 8))
+            self.surf_normal.blit(icon, icon_rect)
+            
+            # 按下状态，Icon 下沉 2px
+            icon_rect.y += 4
+            self.surf_pressed.blit(icon, icon_rect)
+        
+        # 更新基类的图片
+        self.original_image = self.surf_normal
+        self.hover_image = self.surf_pressed
 
 class UpgradeCard(UIElement):
     """
@@ -299,6 +322,29 @@ class UI:
         self.hud_buttons = [
             Button((WINDOW_WIDTH - 50, 50), btn_yellow, btn_yellow_p, icon_pause, 'pause_game')
         ]
+        
+        # --- 右下角声音按钮 ---
+        # 加载声音图标
+        icon_sound = get_icon('icon_sound')
+        icon_mute = get_icon('icon_mute')
+        # 声音按钮使用蓝色样式（参考重新开始按钮）
+        self.sound_button = Button(
+            (WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50), 
+            btn_blue, 
+            btn_blue_p, 
+            icon_sound, 
+            'toggle_sound'
+        )
+        self.sound_button_icon_sound = icon_sound
+        self.sound_button_icon_mute = icon_mute
+        self.sound_button_is_muted = False  # 跟踪静音状态
+    
+    def update_sound_button_icon(self, is_muted):
+        """更新声音按钮图标（根据静音状态）"""
+        if is_muted != self.sound_button_is_muted:
+            self.sound_button_is_muted = is_muted
+            icon = self.sound_button_icon_mute if is_muted else self.sound_button_icon_sound
+            self.sound_button.update_icon(icon)
 
     def draw_custom_cursor(self):
         """绘制自定义光标"""
@@ -320,7 +366,7 @@ class UI:
         # 如果是暂停，加上暂停按钮... 这里为了简化，我们只检查当前绘制的按钮状态
         # 由于 draw 方法里已经更新了 button.is_hovered，我们可以直接利用
         
-        all_active_btns = self.hud_buttons + self.pause_buttons + self.death_buttons
+        all_active_btns = self.hud_buttons + self.pause_buttons + self.death_buttons + [self.sound_button]
         if any(btn.is_hovered for btn in all_active_btns):
             hovering = True
             
@@ -373,6 +419,10 @@ class UI:
         for btn in self.hud_buttons:
             btn.update(mouse_pos)
             btn.draw(self.display_surface)
+        
+        # 绘制声音按钮
+        self.sound_button.update(mouse_pos)
+        self.sound_button.draw(self.display_surface)
 
     def draw_xp_text(self, level, xp):
         # 简单显示等级
@@ -531,6 +581,10 @@ class UI:
             target_buttons = self.pause_buttons
         elif state == 'GAME_OVER':
             target_buttons = self.death_buttons
+        
+        # 检查声音按钮（在所有状态下都可用）
+        if self.sound_button.check_click(mouse_pos, mouse_pressed):
+            return 'toggle_sound'
             
         for btn in target_buttons:
             if btn.check_click(mouse_pos, mouse_pressed):
@@ -800,11 +854,18 @@ class UI:
         
         # 更新点击检测区域（使用原始背景区域，但考虑缩放）
         self.menu_quit_rect = scaled_rect if abs(self.menu_quit_scale - 1.0) > 0.01 else quit_bg_rect
+        
+        # 绘制声音按钮（在主菜单也显示）
+        mouse_pos = pygame.mouse.get_pos()
+        self.sound_button.update(mouse_pos)
+        self.sound_button.draw(self.display_surface)
 
     def get_main_menu_click(self, mouse_pos):
-        """检测主菜单点击位置，返回 'start' 或 'quit' 或 None"""
+        """检测主菜单点击位置，返回 'start' 或 'quit' 或 'toggle_sound' 或 None"""
         if self.menu_started_rect and self.menu_started_rect.collidepoint(mouse_pos):
             return 'start'
         if self.menu_quit_rect and self.menu_quit_rect.collidepoint(mouse_pos):
             return 'quit'
+        if self.sound_button.check_click(mouse_pos, pygame.mouse.get_pressed()):
+            return 'toggle_sound'
         return None

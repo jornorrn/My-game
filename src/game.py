@@ -48,6 +48,9 @@ class Game:
         # 初始化音频管理器
         self.audio_manager = AudioManager(self.loader)
         
+        # 初始化声音按钮图标状态
+        self.ui.update_sound_button_icon(self.audio_manager.is_muted)
+        
         self.state = 'MENU'
         # 初始化时播放主菜单音乐
         self.audio_manager.update_music_for_state(self.state)
@@ -165,7 +168,7 @@ class Game:
                     continue
 
     def update(self, dt):
-        # 根据游戏状态更新背景音乐
+        # 根据游戏状态更新背景音乐（取消静音后会自动恢复）
         self.audio_manager.update_music_for_state(self.state)
         
         if self.state == 'MENU':
@@ -226,7 +229,7 @@ class Game:
 
     def draw(self):
         if self.state == 'MENU':
-            # 主菜单状态：只绘制主菜单
+            # 主菜单状态：只绘制主菜单（声音按钮已在 draw_main_menu 中绘制）
             self.ui.draw_main_menu()
         else:
             # 其他状态：绘制游戏内容
@@ -234,17 +237,33 @@ class Game:
             
             # 始终绘制游戏内容（包括教程状态下）
             self.all_sprites.custom_draw(self.player)
-            self.ui.draw_hud(self.player)
+            self.ui.draw_hud(self.player)  # draw_hud 中已包含声音按钮
             
             if self.state == 'TUTORIAL':
                 # 教程状态下在游戏画面上叠加教程界面
                 self.ui.draw_tutorial()
+                # 在教程状态下也绘制声音按钮（在教程遮罩之上）
+                mouse_pos = pygame.mouse.get_pos()
+                self.ui.sound_button.update(mouse_pos)
+                self.ui.sound_button.draw(self.ui.display_surface)
             elif self.state == 'PAUSED':
                 self.ui.draw_pause()
+                # 在暂停菜单下也绘制声音按钮（在菜单之上）
+                mouse_pos = pygame.mouse.get_pos()
+                self.ui.sound_button.update(mouse_pos)
+                self.ui.sound_button.draw(self.ui.display_surface)
             elif self.state == 'GAME_OVER':
                 self.ui.draw_game_over()
+                # 在死亡菜单下也绘制声音按钮（在菜单之上）
+                mouse_pos = pygame.mouse.get_pos()
+                self.ui.sound_button.update(mouse_pos)
+                self.ui.sound_button.draw(self.ui.display_surface)
             elif self.state == 'LEVEL_UP':
                 self.ui.draw_level_up()
+                # 在升级选择界面下也绘制声音按钮（在菜单之上）
+                mouse_pos = pygame.mouse.get_pos()
+                self.ui.sound_button.update(mouse_pos)
+                self.ui.sound_button.draw(self.ui.display_surface)
 
         self.ui.draw_custom_cursor()
         pygame.display.update()
@@ -275,36 +294,63 @@ class Game:
                             self.state = 'TUTORIAL'
                         elif action == 'quit':
                             self.running = False
+                        elif action == 'toggle_sound':
+                            is_muted = self.audio_manager.toggle_mute()
+                            self.ui.update_sound_button_icon(is_muted)
+                            # 如果取消静音，立即更新音乐状态以恢复播放
+                            if not is_muted:
+                                self.audio_manager.update_music_for_state(self.state)
                     # 新手引导教程：点击图片外区域关闭
                     elif self.state == 'TUTORIAL':
-                        if self.ui.check_tutorial_click(mouse_pos):
+                        # 检查是否点击了声音按钮
+                        if self.ui.sound_button.check_click(mouse_pos, pygame.mouse.get_pressed()):
+                            is_muted = self.audio_manager.toggle_mute()
+                            self.ui.update_sound_button_icon(is_muted)
+                            # 如果取消静音，立即更新音乐状态以恢复播放
+                            if not is_muted:
+                                self.audio_manager.update_music_for_state(self.state)
+                        elif self.ui.check_tutorial_click(mouse_pos):
                             self.state = 'PLAYING'
                     # 传入当前 state，让 UI 判断检测哪组按钮
                     elif self.state in ['PAUSED', 'GAME_OVER', 'PLAYING']:
                         action = self.ui.get_click_action(self.state)
                         if action:
-                            # 播放按钮点击音效
+                            # 播放按钮点击音效（如果未静音）
                             self.audio_manager.play_sfx('sfx_pressbutton', volume=0.5)
                         if action == 'resume': self.state = 'PLAYING'
                         elif action == 'restart': self.reset_game()
                         elif action == 'quit': self.running = False
                         elif action == 'home': self.state = 'MENU'
                         elif action == 'pause_game': self.state = 'PAUSED'
+                        elif action == 'toggle_sound':
+                            is_muted = self.audio_manager.toggle_mute()
+                            self.ui.update_sound_button_icon(is_muted)
+                            # 如果取消静音，立即更新音乐状态以恢复播放
+                            if not is_muted:
+                                self.audio_manager.update_music_for_state(self.state)
 
                     elif self.state == 'LEVEL_UP':
-                        selected_option = self.ui.get_level_up_choice()
-                        if selected_option:
-                            # 播放按钮点击音效
-                            self.audio_manager.play_sfx('sfx_pressbutton', volume=0.5)
-                            # 1. 应用效果
-                            print(f">> Selected Upgrade: {selected_option.title}")
-                            selected_option.apply(self.player)
-                            
-                            # 2. 刷新玩家射击状态 (防止卡住开火)
-                            # 简单的做法是重置按键状态标记，或者什么都不做
-                            # 因为 input() 是每帧检测的，只要状态回到 PLAYING，
-                            # 这里暂时只需恢复状态
-                            self.state = 'PLAYING'
+                        # 检查是否点击了声音按钮
+                        if self.ui.sound_button.check_click(mouse_pos, pygame.mouse.get_pressed()):
+                            is_muted = self.audio_manager.toggle_mute()
+                            self.ui.update_sound_button_icon(is_muted)
+                            # 如果取消静音，立即更新音乐状态以恢复播放
+                            if not is_muted:
+                                self.audio_manager.update_music_for_state(self.state)
+                        else:
+                            selected_option = self.ui.get_level_up_choice()
+                            if selected_option:
+                                # 播放按钮点击音效
+                                self.audio_manager.play_sfx('sfx_pressbutton', volume=0.5)
+                                # 1. 应用效果
+                                print(f">> Selected Upgrade: {selected_option.title}")
+                                selected_option.apply(self.player)
+                                
+                                # 2. 刷新玩家射击状态 (防止卡住开火)
+                                # 简单的做法是重置按键状态标记，或者什么都不做
+                                # 因为 input() 是每帧检测的，只要状态回到 PLAYING，
+                                # 这里暂时只需恢复状态
+                                self.state = 'PLAYING'
 
     def run(self):
         while self.running:

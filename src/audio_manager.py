@@ -7,6 +7,7 @@ class AudioManager:
         self.res = resource_manager
         self.current_bgm = None
         self.failed_played = False  # 标记是否已播放死亡音效
+        self.is_muted = False  # 静音状态
         
     def play_bgm(self, bgm_key, loops=-1, volume=0.6):
         """
@@ -15,6 +16,9 @@ class AudioManager:
         :param loops: 循环次数，-1 表示无限循环
         :param volume: 音量 (0.0 到 1.0)，默认 0.6 (60%)
         """
+        if self.is_muted:
+            return  # 静音时不播放
+        
         bgm_path = self.res.get_sound(bgm_key)
         if bgm_path and bgm_path != self.current_bgm:
             # 停止当前音乐
@@ -40,6 +44,9 @@ class AudioManager:
         :param sfx_key: 音频文件名（不含后缀，如 'sfx_failed'）
         :param volume: 音量 (0.0 到 1.0)，默认 0.9 (90%)
         """
+        if self.is_muted:
+            return  # 静音时不播放
+        
         sound = self.res.get_sound(sfx_key)
         if sound:
             try:
@@ -76,6 +83,21 @@ class AudioManager:
                 self.stop_bgm()
                 self.play_sfx('sfx_failed', volume=0.7)
                 self.failed_played = True
+    
+    def toggle_mute(self):
+        """切换静音状态"""
+        self.is_muted = not self.is_muted
+        if self.is_muted:
+            # 静音：停止所有音频
+            pygame.mixer.music.stop()
+            pygame.mixer.stop()  # 停止所有音效
+            print("[AUDIO] Muted")
+        else:
+            # 取消静音：清除 current_bgm 标记，让 update_music_for_state 重新播放
+            # 这样可以在下次状态更新时自动恢复正确的音乐
+            self.current_bgm = None
+            print("[AUDIO] Unmuted")
+        return self.is_muted
     
     def reset(self):
         """重置音频管理器状态（用于重新开始游戏）"""
