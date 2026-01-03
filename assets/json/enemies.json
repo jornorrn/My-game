@@ -6,7 +6,7 @@
         "hp": 30,
         "damage": 10,
         "speed": 100,
-        "xp": 10,
+        "xp": 30,
         "tier": 1,
         "data": { "frames": 9, "frame_width": 64, "speed": 8, "scale": 1.5 }
     },
@@ -14,210 +14,210 @@
         "id": 2002,
         "name": "绿色史莱姆",
         "image": "green_slime",
-        "hp": 25,
-        "damage": 8,
+        "hp": 15,
+        "damage": 2,
         "speed": 80,
-        "xp": 8,
+        "xp": 10,
         "tier": 1,
-        "data": { "frames": 6, "frame_width": 32, "speed": 6, "scale": 1.2 }
+        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.5 }
     },
     {
         "id": 2003,
         "name": "蓝色史莱姆",
         "image": "blue_slime",
-        "hp": 35,
-        "damage": 10,
+        "hp": 25,
+        "damage": 5,
         "speed": 85,
-        "xp": 12,
-        "tier": 1,
-        "data": { "frames": 6, "frame_width": 32, "speed": 6, "scale": 1.2 }
+        "xp": 20,
+        "tier": 2,
+        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.5 }
     },
     {
         "id": 2004,
         "name": "橙色史莱姆",
         "image": "orange_slime",
-        "hp": 40,
-        "damage": 12,
+        "hp": 35,
+        "damage": 8,
         "speed": 90,
-        "xp": 15,
-        "tier": 1,
-        "data": { "frames": 6, "frame_width": 32, "speed": 6, "scale": 1.2 }
+        "xp": 40,
+        "tier": 3,
+        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.8 }
     },
     {
         "id": 2005,
         "name": "紫色史莱姆",
         "image": "purple_slime",
         "hp": 45,
-        "damage": 14,
+        "damage": 10,
         "speed": 95,
-        "xp": 18,
-        "tier": 1,
-        "data": { "frames": 6, "frame_width": 32, "speed": 6, "scale": 1.2 }
+        "xp": 50,
+        "tier": 4,
+        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 2.0 }
     },
     {
         "id": 2006,
         "name": "青蛙",
         "image": "frog",
         "hp": 20,
-        "damage": 6,
+        "damage": 5,
         "speed": 120,
-        "xp": 7,
+        "xp": 15,
         "tier": 1,
-        "data": { "frames": 4, "frame_width": 32, "speed": 7, "scale": 1.3 }
+        "data": { "frames": 6, "frame_width": 76, "speed": 6, "scale": 1.0 }
     },
     {
         "id": 2007,
         "name": "蠕虫",
         "image": "worm",
-        "hp": 50,
-        "damage": 15,
+        "hp": 15,
+        "damage": 3,
         "speed": 70,
         "xp": 20,
         "tier": 1,
-        "data": { "frames": 8, "frame_width": 32, "speed": 5, "scale": 1.4 }
+        "data": { "frames": 6, "frame_width": 20, "speed": 4, "scale": 1.8 }
     },
     {
         "id": 2008,
         "name": "骷髅",
         "image": "skeleton",
-        "hp": 80,
-        "damage": 20,
+        "hp": 50,
+        "damage": 15,
         "speed": 110,
         "xp": 30,
-        "tier": 2,
-        "data": { "frames": 8, "frame_width": 64, "speed": 8, "scale": 1.6 }
+        "tier": 5,
+        "data": { "frames": 10, "frame_width": 16, "speed": 5, "scale": 1.5 }
     },
     {
         "id": 2009,
         "name": "黑狗",
         "image": "black_dog",
-        "hp": 70,
+        "hp": 50,
         "damage": 18,
         "speed": 130,
         "xp": 25,
-        "tier": 2,
+        "tier": 4,
         "data": { "frames": 6, "frame_width": 48, "speed": 9, "scale": 1.5 }
     },
     {
         "id": 2010,
         "name": "棕狗",
         "image": "brown_dog",
-        "hp": 75,
+        "hp": 50,
         "damage": 19,
         "speed": 135,
         "xp": 27,
-        "tier": 2,
+        "tier": 4,
         "data": { "frames": 6, "frame_width": 48, "speed": 9, "scale": 1.5 }
     },
     {
         "id": 2011,
         "name": "灰狗",
         "image": "grey_dog",
-        "hp": 72,
+        "hp": 50,
         "damage": 18,
         "speed": 132,
         "xp": 26,
-        "tier": 2,
+        "tier": 4,
         "data": { "frames": 6, "frame_width": 48, "speed": 9, "scale": 1.5 }
     },
     {
         "id": 2012,
         "name": "白狗",
         "image": "white_dog",
-        "hp": 68,
+        "hp": 50,
         "damage": 17,
         "speed": 140,
         "xp": 24,
-        "tier": 2,
+        "tier": 4,
         "data": { "frames": 6, "frame_width": 48, "speed": 9, "scale": 1.5 }
     },
     {
         "id": 2013,
         "name": "蘑菇",
         "image": "mushroom",
-        "hp": 90,
-        "damage": 22,
+        "hp": 30,
+        "damage": 8,
         "speed": 100,
-        "xp": 32,
+        "xp": 35,
         "tier": 2,
-        "data": { "frames": 5, "frame_width": 32, "speed": 7, "scale": 1.4 }
+        "data": { "frames": 8, "frame_width": 36, "speed": 4, "scale": 1.5 }
     },
     {
         "id": 2014,
         "name": "飞行蘑菇",
         "image": "flymushroom",
-        "hp": 85,
-        "damage": 25,
+        "hp": 60,
+        "damage": 15,
         "speed": 125,
         "xp": 35,
-        "tier": 2,
-        "data": { "frames": 6, "frame_width": 32, "speed": 8, "scale": 1.5 }
+        "tier": 5,
+        "data": { "frames": 8, "frame_width": 54, "speed": 5, "scale": 1.5 }
     },
     {
         "id": 2015,
         "name": "蓝色石像鬼",
         "image": "golem_blue",
-        "hp": 150,
-        "damage": 35,
+        "hp": 80,
+        "damage": 20,
         "speed": 95,
         "xp": 50,
-        "tier": 3,
-        "data": { "frames": 8, "frame_width": 64, "speed": 6, "scale": 1.8 }
+        "tier": 6,
+        "data": { "frames": 10, "frame_width": 42, "speed": 5, "scale": 1.8 }
     },
     {
         "id": 2016,
         "name": "橙色石像鬼",
         "image": "golem_orange",
-        "hp": 180,
-        "damage": 40,
-        "speed": 100,
+        "hp": 100,
+        "damage": 30,
+        "speed": 85,
         "xp": 60,
-        "tier": 3,
-        "data": { "frames": 8, "frame_width": 64, "speed": 6, "scale": 1.8 }
+        "tier": 8,
+        "data": { "frames": 10, "frame_width": 42, "speed": 5, "scale": 2.0 }
     },
     {
         "id": 2017,
         "name": "吸血鬼",
         "image": "vampire",
-        "hp": 120,
-        "damage": 30,
+        "hp": 80,
+        "damage": 35,
         "speed": 150,
-        "xp": 55,
-        "tier": 3,
-        "data": { "frames": 10, "frame_width": 64, "speed": 9, "scale": 1.7 }
+        "xp": 70,
+        "tier": 9,
+        "data": { "frames": 8, "frame_width": 32, "speed": 4, "scale": 1.7 }
     },
     {
         "id": 2018,
-        "name": "特隆春戈",
+        "name": "树妖",
         "image": "tronchungo",
-        "hp": 200,
-        "damage": 45,
+        "hp": 100,
+        "damage": 35,
         "speed": 105,
-        "xp": 70,
-        "tier": 3,
-        "data": { "frames": 7, "frame_width": 64, "speed": 7, "scale": 2.0 }
+        "xp": 80,
+        "tier": 10,
+        "data": { "frames": 6, "frame_width": 36, "speed": 6, "scale": 2.0 }
     },
     {
         "id": 2019,
         "name": "精英蓝色石像鬼",
         "image": "golem_blue",
-        "hp": 250,
-        "damage": 50,
+        "hp": 120,
+        "damage": 40,
         "speed": 110,
-        "xp": 85,
-        "tier": 4,
-        "data": { "frames": 8, "frame_width": 64, "speed": 6, "scale": 2.2 }
+        "xp": 100,
+        "tier": 12,
+        "data": { "frames": 10, "frame_width": 42, "speed": 5, "scale": 2.4 }
     },
     {
         "id": 2020,
         "name": "精英橙色石像鬼",
         "image": "golem_orange",
-        "hp": 300,
-        "damage": 60,
+        "hp": 150,
+        "damage": 50,
         "speed": 115,
-        "xp": 100,
-        "tier": 4,
-        "data": { "frames": 8, "frame_width": 64, "speed": 6, "scale": 2.2 }
+        "xp": 120,
+        "tier": 14,
+        "data": { "frames": 10, "frame_width": 42, "speed": 5, "scale": 2.6 }
     },
     {
         "id": 2021,
@@ -227,18 +227,18 @@
         "damage": 55,
         "speed": 170,
         "xp": 90,
-        "tier": 4,
-        "data": { "frames": 10, "frame_width": 64, "speed": 9, "scale": 2.0 }
+        "tier": 15,
+        "data": { "frames": 8, "frame_width": 32, "speed": 4, "scale": 2.4 }
     },
     {
         "id": 2022,
-        "name": "传奇特隆春戈",
+        "name": "百年树妖",
         "image": "tronchungo",
-        "hp": 400,
-        "damage": 75,
+        "hp": 240,
+        "damage": 60,
         "speed": 120,
         "xp": 120,
-        "tier": 5,
-        "data": { "frames": 7, "frame_width": 64, "speed": 7, "scale": 2.5 }
+        "tier": 16,
+        "data": { "frames": 6, "frame_width": 36, "speed": 6, "scale": 2.5 }
     }
 ]
