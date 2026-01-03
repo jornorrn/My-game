@@ -48,43 +48,82 @@ class WeaponAddUpgrade(UpgradeOption):  #type: weapon_add
         print(f"[UPGRADE] Adding Weapon ID: {w_id}")
         player.weapon_controller.equipped_weapons.append(w_id)
 
-class WeaponBuffUpgrade(UpgradeOption): #type: weapon_upgrade
+class WeaponBuffUpgrade(UpgradeOption):
+    """
+    武器强化升级
+    支持在一个选项中同时修改多个属性 (如: 伤害+5 且 范围+20%)
+    
+    JSON data 格式示例:
+    {
+        "effects": {
+            "damage": 5,           // 顶层属性
+            "data.scale": 0.2,     // 嵌套属性: 视觉/判定箱缩放
+            "data.radius": 20      // 嵌套属性: 光环/环绕半径
+        },
+        "mode": "add",             // 计算模式: add, mult, set
+        "target": "all"            // 目标: all 或 特定ID
+    }
+    """
     def apply(self, player):
         target = self.raw_data.get('target', 'all')
-        attr = self.raw_data['attr']
-        val = self.raw_data['value']
-        mode = self.raw_data['mode']
-
-        # 获取资源管理器引用 (通过 player 获取有点绕，但在当前架构下最方便)
-        # 注意：这里我们修改的是 Loader 里的全局数据，这意味着新捡到的同类武器也会变强
+        mode = self.raw_data.get('mode', 'add')
+        
+        # 1. 解析要修改的属性列表
+        # 优先读取 'effects' 字典；如果不存在，尝试兼容旧的 'attr'/'value' 写法
+        changes = {}
+        if 'effects' in self.raw_data:
+            changes = self.raw_data['effects']
+        elif 'attr' in self.raw_data and 'value' in self.raw_data:
+            changes = {self.raw_data['attr']: self.raw_data['value']}
+            
+        # 获取全局武器数据库
         weapon_db = player.weapon_controller.res.data['weapons']
         
         count = 0
         for w_id, w_data in weapon_db.items():
-            # 筛选目标：如果不是 'all' 且 ID 不匹配，则跳过
+            # 筛选目标
             if target != 'all' and str(w_id) != str(target):
                 continue
+            
+            # 应用所有变更项
+            for key, val in changes.items():
                 
-            # [新增] 支持修改 data 内部的字段 (如 scale, radius)
-            # Schema 示例: { "attr": "data.scale", "value": 0.5, "mode": "add" }
-            if attr.startswith('data.'):
-                sub_key = attr.split('.')[1]
-                target_dict = w_data.setdefault('data', {})
-                if sub_key in target_dict:
-                    if mode == 'add': target_dict[sub_key] += val
-                    elif mode == 'mult': target_dict[sub_key] *= val
-                else:
-                    # 如果没有该字段，初始化
-                    target_dict[sub_key] = val
-
-            if attr in w_data:
-                if mode == 'add':
-                    w_data[attr] += val
-                elif mode == 'mult':
-                    w_data[attr] *= val
-                count += 1
-                
-        print(f"[UPGRADE] Buffed {attr} for {count} weapons.")
+                # A. 处理嵌套属性 (如 data.scale, data.radius)
+                if key.startswith('data.'):
+                    sub_key = key.split('.')[1]
+                    
+                    # 确保 data 字典存在
+                    if 'data' not in w_data:
+                        w_data['data'] = {}
+                    
+                    # 获取当前值 (提供合理的默认值)
+                    # scale 默认为 1.0, radius 默认为 0 (或者是之前配置的值), frames 等其他值为 0
+                    default_val = 1.0 if sub_key == 'scale' else 0
+                    current_val = w_data['data'].get(sub_key, default_val)
+                    
+                    # 计算新值
+                    new_val = current_val
+                    if mode == 'add': new_val += val
+                    elif mode == 'mult': new_val *= val
+                    elif mode == 'set': new_val = val
+                    
+                    # 写回数据
+                    w_data['data'][sub_key] = new_val
+                    
+                # B. 处理常规顶层属性 (damage, cooldown, speed)
+                elif key in w_data:
+                    current_val = w_data[key]
+                    new_val = current_val
+                    
+                    if mode == 'add': new_val += val
+                    elif mode == 'mult': new_val *= val
+                    elif mode == 'set': new_val = val
+                    
+                    w_data[key] = new_val
+            
+            count += 1
+            
+        print(f"[UPGRADE] Applied {len(changes)} buffs to {count} weapons. Changes: {changes}")
 
 class HealUpgrade(UpgradeOption):   #type: heal
     def apply(self, player):

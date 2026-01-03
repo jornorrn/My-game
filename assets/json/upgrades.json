@@ -21,7 +21,7 @@
         "id": 1003,
         "title": "再来一根",
         "desc": "同时使用两根风系魔杖",
-        "image": "icon_wand",
+        "image": "wand",
         "tier": 2,
         "type": "weapon_add",
         "data": {"weapon_id": 3001}
@@ -42,7 +42,9 @@
         "image": "upgrade_3001",
         "tier": 2,
         "type": "weapon_buff",
-        "data": {"attr": "damage", "value": 5, "mode": "add", "target": "all"}
+        "data": {"effects":{"damage": 5,"data.scale": 0.5},
+                "mode": "add",
+                "target": "3001"}
     },
     {
         "id": 1006,

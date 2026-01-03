@@ -8,6 +8,7 @@ from src.enemy import Enemy
 from src.components import YSortCameraGroup, Tile
 from src.upgrade_system import UpgradeManager
 from src.ui import UI
+from src.map_manager import MapManager
 
 class Game:
     def __init__(self):
@@ -24,9 +25,21 @@ class Game:
         self.all_sprites = YSortCameraGroup() 
         self.obstacle_sprites = pygame.sprite.Group()
         self.enemy_sprites = pygame.sprite.Group()
+        # [新增] 初始化地图管理器
+        self.map_manager = MapManager(self)
+        self.map_manager.generate_forest() # 生成地图
+        # [修改] 使用生成的出生点
+        spawn_pos = self.map_manager.spawn_point
+        self.player = Player(
+            pos=spawn_pos, 
+            groups=[self.all_sprites], 
+            obstacle_sprites=self.obstacle_sprites,
+            enemy_sprites=self.enemy_sprites,
+            resource_manager=self.loader
+        )
         self.upgrade_manager = UpgradeManager(self.loader)
 
-        self.setup_test_map()
+        #self.setup_test_map()
         
         self.spawn_timer = 0
         self.base_spawn_interval = 1200
@@ -35,34 +48,31 @@ class Game:
         
         self.state = 'PLAYING' 
 
-        # [新增] 死亡计时器
-        self.death_timer = 0
-
-    def setup_test_map(self):
+    #def setup_test_map(self):
         # 生成 40x40 的大地图
-        map_width = 40
-        map_height = 40
+        #map_width = 40
+        #map_height = 40
         
-        for x in range(map_width):
-            for y in range(map_height):
-                pos = (x * TILE_SIZE, y * TILE_SIZE)
+        #for x in range(map_width):
+            #for y in range(map_height):
+                #pos = (x * TILE_SIZE, y * TILE_SIZE)
                 # 地板
-                Tile(pos, [self.all_sprites], 'floor')
+                #Tile(pos, [self.all_sprites], 'floor')
                 # 围墙
-                if x == 0 or x == map_width - 1 or y == 0 or y == map_height - 1:
-                    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
+                #if x == 0 or x == map_width - 1 or y == 0 or y == map_height - 1:
+                #    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
                 # 随机障碍物 
-                elif random.random() < 0.01:
-                    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
+                #elif random.random() < 0.01:
+                #    Tile(pos, [self.all_sprites, self.obstacle_sprites], 'wall')
 
         # 玩家放在地图中心
-        self.player = Player(
-            pos=(map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2), 
-            groups=[self.all_sprites], 
-            obstacle_sprites=self.obstacle_sprites,
-            enemy_sprites=self.enemy_sprites,
-            resource_manager=self.loader
-        )
+        #self.player = Player(
+        #    pos=(map_width * TILE_SIZE // 2, map_height * TILE_SIZE // 2), 
+        #    groups=[self.all_sprites], 
+        #    obstacle_sprites=self.obstacle_sprites,
+        #    enemy_sprites=self.enemy_sprites,
+        #    resource_manager=self.loader
+        #)
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 

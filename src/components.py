@@ -1,5 +1,6 @@
 import pygame
 from src.settings import *
+from src.vfx import AnimationPlayer
 
 class GameSprite(pygame.sprite.Sprite):
     """
@@ -104,6 +105,31 @@ class Tile(GameSprite):
         self.rect = self.image.get_rect(topleft=pos)
         # 如果是墙壁，hitbox 稍微缩小一点，如果是地板，不需要 hitbox (但为了统一先保留)
         self.hitbox = self.rect.inflate(0, -10)
+
+class AnimatedTile(Tile):
+    """支持序列帧动画的地块 (如水面、火海)"""
+    def __init__(self, pos, groups, sprite_type, surface, frame_data):
+        # 初始化父类，先不传 image
+        super().__init__(pos, groups, sprite_type, surface=None)
+        
+        # 使用通用动画播放器
+        # frame_data 格式: {'frames': 16, 'frame_width': 192, 'speed': 10}
+        self.anim_player = AnimationPlayer(surface, frame_data, default_speed=frame_data.get('speed', 5))
+        
+        self.image = self.anim_player.frames[0]
+        # 如果素材比 TILE_SIZE 大，需要缩放吗？
+        # 这里假设水面素材如果是 192x192，我们把它缩放到 TILE_SIZE (64x64)
+        if self.image.get_width() != TILE_SIZE:
+             self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
+             
+        self.rect = self.image.get_rect(topleft=pos)
+        self.hitbox = self.rect.inflate(0, 0) # 或者是 (-10, -10)
+
+    def update(self, dt):
+        # 播放动画
+        raw_frame = self.anim_player.update(dt, loop=True)
+        # 实时缩放以匹配地图网格
+        self.image = pygame.transform.scale(raw_frame, (TILE_SIZE, TILE_SIZE))
 
 class YSortCameraGroup(pygame.sprite.Group):
     """

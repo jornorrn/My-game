@@ -19,27 +19,27 @@ class FloatingWeapon(pygame.sprite.Sprite):
         # 不需要 hitbox，因为只是装饰
 
     def update(self, dt):
-        # 简单的环绕动画 (或者跟随)
-        # 这里实现为：位于玩家身后半圆，跟随玩家移动
-        
-        # 如果你想让它旋转，可以用 current_time
-        # 这里实现简单的固定相对位置
-        
         center = self.player.rect.center
-        # 假设 0 度在右边
+        
+        # 简单的环绕动画
+        # t = pygame.time.get_ticks() / 1000 # 旋转速度
+        # angle = t * 2 + math.radians(self.angle_offset) # 动态旋转
+        
+        # 或者 保持固定相对位置 (跟随身后)
         rad = math.radians(self.angle_offset)
         
-        # 简单的呼吸动画
-        t = pygame.time.get_ticks() / 500
-        hover_dist = self.distance + math.sin(t + self.angle_offset) * 5
+        # [修改] 距离计算：基于角色大小 + 基础距离 + 呼吸浮动
+        base_dist = (self.player.hitbox.width / 2) + 15 
+        t = pygame.time.get_ticks() / 300
+        hover_offset = math.sin(t + self.angle_offset) * 3
         
-        x = center[0] + math.cos(rad) * hover_dist
-        y = center[1] + math.sin(rad) * hover_dist
+        final_dist = base_dist + hover_offset
+        
+        x = center[0] + math.cos(rad) * final_dist
+        y = center[1] + math.sin(rad) * final_dist
         
         self.rect.center = (x, y)
-        # 可选：让武器指向外侧
-        self.image = pygame.transform.rotate(self.original_image, -self.angle_offset - 90)
-        self.rect = self.image.get_rect(center=self.rect.center)
+
 
 class Player(Entity):
     def __init__(self, pos, groups, obstacle_sprites, enemy_sprites, resource_manager):

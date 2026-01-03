@@ -27,10 +27,10 @@
         "type": "aura",
         "image": "blue_orb",
         "effect": "blue_orbs",
-        "cooldown": 200, 
+        "cooldown": 500, 
         "damage": 5,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
-                    "margin": 0, "radius": 120, "scale": 1.5 }
+                    "margin": 0, "radius": 40, "scale": 3 }
     }
 ]

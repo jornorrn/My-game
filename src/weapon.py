@@ -13,12 +13,12 @@ class Projectile(GameSprite):
         
         self.enemy_sprites = enemy_sprites
         self.obstacle_sprites = obstacle_sprites
-        
+
         self.damage = weapon_data['damage']
         self.speed = weapon_data['speed']
         self.range = weapon_data.get('range', 1000)
         self.scale = weapon_data.get('data', {}).get('scale', 1.0)
-        
+
         # 1. 处理方向
         # 原始方向向量为发射角度
         base_angle = math.degrees(math.atan2(-direction.y, direction.x))
@@ -27,7 +27,7 @@ class Projectile(GameSprite):
         rad = math.radians(final_angle)
         self.direction = pygame.math.Vector2(math.cos(rad), - math.sin(rad))
             
-        # [修改] 使用通用控制器获取原始帧
+        # 使用通用控制器获取原始帧
         # 注意：子弹比较特殊，因为需要旋转。如果每帧 update 都旋转，性能开销大。
         # 最佳实践是：在 init 里把所有动画帧都预先旋转好。
         
@@ -42,8 +42,9 @@ class Projectile(GameSprite):
         self.anim_player = None # 标记是否有动画
         
         if is_placeholder:    # 黄色圆形占位符，不需要旋转
-            self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (255, 200, 50), (10, 10), 8)
+            r = int(10 * self.scale)
+            self.image = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (255, 200, 50), (r, r), r-2)
         else:   # 正常图片：处理动画与预旋转
             temp_anim = AnimationPlayer(
                 full_image=full_image,
@@ -51,23 +52,28 @@ class Projectile(GameSprite):
                 default_speed=10
             )
             raw_frames = temp_anim.get_all_frames()
-            self.rotated_frames = []
 
+            # 处理流程： 原图 -> 缩放 -> 旋转 -> 保存
             for frame in raw_frames:
-                # [修改] 步骤1: 先缩放原始帧
+                # 1. 缩放
                 if self.scale != 1.0:
                     w = int(frame.get_width() * self.scale)
                     h = int(frame.get_height() * self.scale)
-                    frame = pygame.transform.scale(frame, (w, h))
+                    scaled_frame = pygame.transform.scale(frame, (w, h))
+                else:
+                    scaled_frame = frame
                 
-                # [修改] 步骤2: 再旋转 (这样不会有锯齿或切边问题)
-                self.rotated_frames.append(pygame.transform.rotate(frame, final_angle))
+                # 2. 旋转
+                rotated_frame = pygame.transform.rotate(scaled_frame, final_angle)
+                self.rotated_frames.append(rotated_frame)
             
             self.image = self.rotated_frames[0]
             self.anim_player = True 
 
         self.frame_index = 0
-        self.animation_speed = 10
+        self.animation_speed = 10 
+        
+        self.rect = self.image.get_rect(center=pos)
 
         # 3. 设置 Rect 和 Hitbox
         self.rect = self.image.get_rect(center=pos)
@@ -124,39 +130,34 @@ class Orbital(GameSprite):
         
         self.player = player
         self.enemy_sprites = enemy_sprites
-        
+        self.weapon_data = weapon_data
+        self.data_ref = weapon_data.get('data', {}) # 引用
+
         # 获取数据
         self.damage = weapon_data['damage']
         self.rot_speed = weapon_data['speed'] # 角度/秒
-        self.radius = weapon_data.get('data', {}).get('radius', 80)
+        self.radius = self.data_ref.get('radius', 80)
         self.dmg_interval = weapon_data['cooldown']
-        self.scale = weapon_data.get('data', {}).get('scale', 1.0)
 
-        # 应用缩放
-        if self.scale != 1.0:
-            w = int(self.image.get_width() * self.scale)
-            h = int(self.image.get_height() * self.scale)
-            self.image = pygame.transform.scale(self.image, (w, h))
-        
         # 使用通用动画控制器
         self.anim_player = AnimationPlayer(
             full_image=weapon_data['image_surf'],
             data_dict=weapon_data.get('data', {}),
             default_speed=15
         )
-
         # 图像处理 (从 effect 字段获取实物图)
-        self.image = self.image = pygame.transform.scale(self.anim_player.frames[0], (w*self.scale, h*self.scale))
+        self.image = self.anim_player.frames[0]
         self.rect = self.image.get_rect(center=player.rect.center)
-        
         # 判定箱：使用图片实际大小
         self.hitbox = self.rect.inflate(0, 0)
-        
         # 运行时状态
         self.angle = start_angle
         self.attack_timer = 0 # 用于控制伤害间隔
 
     def update(self, dt):
+        # 读取最新 Scale
+        current_scale = self.data_ref.get('scale', 1.0)
+
         # 1. 旋转位置计算
         self.angle += self.rot_speed * dt
         if self.angle >= 360: self.angle -= 360
@@ -167,28 +168,24 @@ class Orbital(GameSprite):
         offset_y = math.sin(rad) * self.radius
         
         # 跟随玩家中心
-        center_pos = self.player.rect.center
-        self.rect.centerx = center_pos[0] + offset_x
-        self.rect.centery = center_pos[1] + offset_y
-        self.hitbox.center = self.rect.center
+        self.rect.centerx = self.player.rect.center[0] + offset_x
+        self.rect.centery = self.player.rect.center[1] + offset_y
 
         # 动画更新 + 实时缩放
         raw_img = self.anim_player.update(dt, loop=True)
-        
-        if hasattr(self, 'scale') and self.scale != 1.0:
-             w = int(raw_img.get_width() * self.scale)
-             h = int(raw_img.get_height() * self.scale)
-             self.image = pygame.transform.scale(raw_img, (w, h))
+        if current_scale != 1.0:
+            w = int(raw_img.get_width() * current_scale)
+            h = int(raw_img.get_height() * current_scale)
+            self.image = pygame.transform.scale(raw_img, (w, h))
         else:
-             self.image = raw_img
+            self.image = raw_img
         
         # [新增] 动态更新 Hitbox (如果升级导致 scale 变化，hitbox 也要变)
         # 假设判定范围就是图片大小
-        if self.image.get_size() != self.hitbox.size:
-             self.rect = self.image.get_rect(center=self.rect.center)
-             self.hitbox = self.rect.inflate(0, 0) # 贴合图片
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.hitbox = self.rect.inflate(0, 0)
 
-        # 2. 伤害判定 (基于时间间隔)
+        # 伤害判定 (基于时间间隔)
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
             # 检测碰撞
@@ -211,75 +208,90 @@ class Aura(GameSprite):
         self.player = player
         self.enemy_sprites = enemy_sprites
         
+        # 保存 data 的引用，而不是只读取一次数值
+        self.weapon_data = weapon_data 
+        self.data_ref = weapon_data.get('data', {}) # 快捷引用
+        # 初始读取
         self.damage = weapon_data['damage']
         self.dmg_interval = weapon_data['cooldown']
-        self.radius = weapon_data.get('data', {}).get('radius', 100)
-        self.scale = weapon_data.get('data', {}).get('scale', 1.0)
+        self.current_scale = self.data_ref.get('scale', 1.0)
+        self.radius_base = self.data_ref.get('radius', 100)
 
         # [逻辑] 检查是否为占位符 (32x32 洋红色)
         full_image = weapon_data['image_surf']
-        is_placeholder = False
+        self.is_placeholder = False
         if full_image.get_size() == (32, 32):
-             if full_image.get_at((16, 16)) == (255, 0, 255, 255):
-                is_placeholder = True
-        if is_placeholder:  # 占位符：画一个半透明的蓝色圆圈
-            self.image = pygame.Surface((self.radius*2, self.radius*2), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (0, 100, 255, 100), (self.radius, self.radius), self.radius)
-            self.anim_player = None # 无动画
+             if full_image.get_at((16, 16)) == (255, 0, 255, 255): 
+                 self.is_placeholder = True
+
+        if self.is_placeholder:
+            self.anim_player = None
+            self.image = self._draw_placeholder_image()
         else:   # 正常素材：使用动画控制器
             anim_speed = weapon_data['speed']
             self.anim_player = AnimationPlayer(
                 full_image=full_image, 
-                data_dict=weapon_data.get('data', {}),
+                data_dict=self.data_ref,
                 default_speed=anim_speed if anim_speed > 0 else 10
             )
-
-        # 初始化
-        self.image = self.rotated_frames[0]
+            self.image = self.anim_player.frames[0]
 
         self.rect = self.image.get_rect(center=player.rect.center)
-        # 使用 inflate 调整 rect 判定箱大小 = 2 * Radius
-        target_size = self.radius * 2 * self.scale
-        diff_x = target_size - self.rect.width
-        diff_y = target_size - self.rect.height
-        self.hitbox = self.rect.inflate(diff_x, diff_y)
-
+        self.hitbox = self.rect.inflate(0, 0)
         self.attack_timer = 0
 
+    def _draw_placeholder_image(self):
+        """辅助函数：根据当前半径和缩放绘制占位符"""
+        # 实时计算半径
+        r = int(self.radius_base * self.current_scale)
+        surf = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (0, 100, 255, 100), (r, r), r)
+        return surf
+    
     def update(self, dt):
-        # 1. 跟随
         self.rect.center = self.player.rect.center
+        # 每一帧都从源数据读取最新的 Scale
+        # 这样 UpgradeSystem 修改了 json data 后，这里立刻生效
+        target_scale = self.data_ref.get('scale', 1.0)
+        self.current_scale = target_scale # 更新本地记录
         
-        # 2. 动画 + 缩放
-        raw_img = self.anim_player.update(dt, loop=True)
-        if self.scale != 1.0:
-            w = int(raw_img.get_width() * self.scale)
-            h = int(raw_img.get_height() * self.scale)
-            self.image = pygame.transform.scale(raw_img, (w, h))
-        else:
-            self.image = raw_img
-        # [核心修改] Hitbox 动态跟随 Scale
-        # 逻辑：基础半径(radius) * 缩放倍率(scale)
-        # 这样升级只需要修改 data.scale，视觉和范围都会变大
-        current_radius = self.radius * self.scale
-        target_size = int(current_radius * 2)
+        # 1. 图像处理
+        if self.is_placeholder:
+            # 如果是占位符，如果缩放变了，需要重画（或者简单点，每帧重画）
+            # 为了性能，可以判断 scale 是否变化，这里简化为每帧重画确保正确
+            self.image = self._draw_placeholder_image()
+        elif self.anim_player:
+            # 获取原始帧
+            raw_img = self.anim_player.update(dt, loop=True)
+            # 应用缩放
+            if target_scale != 1.0:
+                w = int(raw_img.get_width() * target_scale)
+                h = int(raw_img.get_height() * target_scale)
+                self.image = pygame.transform.scale(raw_img, (w, h))
+            else:
+                self.image = raw_img
+        
+        # 2. 判定箱处理 (Visual 跟随 Scale, 判定也跟随 Scale)
+        # 逻辑：判定半径 = 基础半径 * 缩放倍率
+        current_radius = self.radius_base * self.current_scale
+        target_diameter = int(current_radius * 2)
         
         # 确保 rect 中心正确
         self.rect = self.image.get_rect(center=self.player.rect.center)
-        # 强制 Hitbox 大小为 target_size
-        if self.hitbox.width != target_size:
-            # 创建一个新的 rect 作为 hitbox，居中于 player
-            self.hitbox = pygame.Rect(0, 0, target_size, target_size)
+        
+        # 强制 Hitbox 大小跟随计算出的直径
+        if self.hitbox.width != target_diameter:
+             self.hitbox = pygame.Rect(0, 0, target_diameter, target_diameter)
+        
         self.hitbox.center = self.rect.center
         
-        # 3. 伤害
+        # 3. 伤害逻辑
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
             hits = pygame.sprite.spritecollide(self, self.enemy_sprites, False, 
                                                lambda s, e: s.hitbox.colliderect(e.hitbox))
             for enemy in hits:
-                if hasattr(enemy, 'take_damage'):
-                    enemy.take_damage(self.damage)
+                if hasattr(enemy, 'take_damage'): enemy.take_damage(self.damage)
             self.attack_timer = current_time
 
 class WeaponController:
