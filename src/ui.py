@@ -71,6 +71,29 @@ class Button(UIElement):
             
         super().__init__(center_pos, self.surf_normal, self.surf_pressed, scale_on_hover=True)
         self.action_name = action_name
+        self.bg_normal = bg_normal
+        self.bg_pressed = bg_pressed
+        self.current_icon = icon
+    
+    def update_icon(self, icon):
+        """更新按钮图标"""
+        self.current_icon = icon
+        # 重新合成图标到背景上
+        self.surf_normal = self.bg_normal.copy()
+        self.surf_pressed = self.bg_pressed.copy()
+        
+        if icon:
+            # 将 Icon 居中绘制到按钮背景上
+            icon_rect = icon.get_rect(center=(self.bg_normal.get_width()//2, self.bg_normal.get_height()//2 - 8))
+            self.surf_normal.blit(icon, icon_rect)
+            
+            # 按下状态，Icon 下沉 2px
+            icon_rect.y += 4
+            self.surf_pressed.blit(icon, icon_rect)
+        
+        # 更新基类的图片
+        self.original_image = self.surf_normal
+        self.hover_image = self.surf_pressed
 
 class UpgradeCard(UIElement):
     """
@@ -248,6 +271,12 @@ class UI:
         # 主菜单按钮文本和位置（用于点击检测）
         self.menu_started_rect = None
         self.menu_quit_rect = None
+        
+        # 主菜单按钮悬停状态和缩放因子
+        self.menu_started_hovered = False
+        self.menu_quit_hovered = False
+        self.menu_started_scale = 1.0
+        self.menu_quit_scale = 1.0
 
     def _init_buttons(self):
         """组装所有按钮"""
@@ -286,13 +315,36 @@ class UI:
         self.death_buttons = [
             # Restart (Blue) - 居左
             Button((cx - 50, btn_y), btn_blue, btn_blue_p, icon_restart, 'restart'),
-            # Quit (Red) - 居右
-            Button((cx + 50, btn_y), btn_red, btn_red_p, icon_quit, 'quit')
+            # Home (Red) - 居右
+            Button((cx + 50, btn_y), btn_red, btn_red_p, icon_home, 'home')
         ]
         # --- 右上角 HUD 暂停按钮 ---
         self.hud_buttons = [
             Button((WINDOW_WIDTH - 50, 50), btn_yellow, btn_yellow_p, icon_pause, 'pause_game')
         ]
+        
+        # --- 右下角声音按钮 ---
+        # 加载声音图标
+        icon_sound = get_icon('icon_sound')
+        icon_mute = get_icon('icon_mute')
+        # 声音按钮使用蓝色样式（参考重新开始按钮）
+        self.sound_button = Button(
+            (WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50), 
+            btn_blue, 
+            btn_blue_p, 
+            icon_sound, 
+            'toggle_sound'
+        )
+        self.sound_button_icon_sound = icon_sound
+        self.sound_button_icon_mute = icon_mute
+        self.sound_button_is_muted = False  # 跟踪静音状态
+    
+    def update_sound_button_icon(self, is_muted):
+        """更新声音按钮图标（根据静音状态）"""
+        if is_muted != self.sound_button_is_muted:
+            self.sound_button_is_muted = is_muted
+            icon = self.sound_button_icon_mute if is_muted else self.sound_button_icon_sound
+            self.sound_button.update_icon(icon)
 
     def draw_custom_cursor(self):
         """绘制自定义光标"""
@@ -314,7 +366,7 @@ class UI:
         # 如果是暂停，加上暂停按钮... 这里为了简化，我们只检查当前绘制的按钮状态
         # 由于 draw 方法里已经更新了 button.is_hovered，我们可以直接利用
         
-        all_active_btns = self.hud_buttons + self.pause_buttons + self.death_buttons
+        all_active_btns = self.hud_buttons + self.pause_buttons + self.death_buttons + [self.sound_button]
         if any(btn.is_hovered for btn in all_active_btns):
             hovering = True
             
@@ -352,7 +404,9 @@ class UI:
             self.display_surface.blit(fill_surf, (x + self.w_L, y + self.fill_offset_y))
             
         # --- 3. 绘制文字 ---
-        txt = f"{int(current)}/{max_val}"
+        # 确保显示的生命值不会为负数
+        display_current = max(0, int(current))
+        txt = f"{display_current}/{max_val}"
         txt_surf = self.font.render(txt, False, (255, 255, 255))
         # 稍微向下微调一点视觉中心
         txt_rect = txt_surf.get_rect(center=(x + target_width // 2, y + self.frame_height // 2 - 2))
@@ -365,6 +419,10 @@ class UI:
         for btn in self.hud_buttons:
             btn.update(mouse_pos)
             btn.draw(self.display_surface)
+        
+        # 绘制声音按钮
+        self.sound_button.update(mouse_pos)
+        self.sound_button.draw(self.display_surface)
 
     def draw_xp_text(self, level, xp):
         # 简单显示等级
@@ -523,6 +581,10 @@ class UI:
             target_buttons = self.pause_buttons
         elif state == 'GAME_OVER':
             target_buttons = self.death_buttons
+        
+        # 检查声音按钮（在所有状态下都可用）
+        if self.sound_button.check_click(mouse_pos, mouse_pressed):
+            return 'toggle_sound'
             
         for btn in target_buttons:
             if btn.check_click(mouse_pos, mouse_pressed):
@@ -578,6 +640,83 @@ class UI:
         
         return outline_surf
 
+    def _create_gradient_surface(self, width, height):
+        """创建渐变 surface，颜色为 linear-gradient(180deg, #FFB400 0%, rgba(190, 98, 33, 0.8279) 56%, #2C1200 100%)"""
+        # 创建带透明度的 surface
+        gradient_surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        
+        # 渐变颜色定义（RGB 值）
+        # #FFB400 = (255, 180, 0)
+        # rgba(190, 98, 33, 0.8279) 中的 RGB = (190, 98, 33)
+        # #2C1200 = (44, 18, 0)
+        
+        color_start = (255, 180, 0)      # #FFB400
+        color_mid = (190, 98, 33)        # rgba(190, 98, 33, 0.8279) 的 RGB
+        color_end = (44, 18, 0)          # #2C1200
+        
+        mid_position = int(height * 0.56)  # 56% 位置
+        
+        # 从上到下绘制渐变
+        for y in range(height):
+            if y < mid_position:
+                # 从 start 到 mid
+                t = y / mid_position if mid_position > 0 else 0
+                r = int(color_start[0] * (1 - t) + color_mid[0] * t)
+                g = int(color_start[1] * (1 - t) + color_mid[1] * t)
+                b = int(color_start[2] * (1 - t) + color_mid[2] * t)
+            else:
+                # 从 mid 到 end
+                t = (y - mid_position) / (height - mid_position) if (height - mid_position) > 0 else 0
+                r = int(color_mid[0] * (1 - t) + color_end[0] * t)
+                g = int(color_mid[1] * (1 - t) + color_end[1] * t)
+                b = int(color_mid[2] * (1 - t) + color_end[2] * t)
+            
+            # 使用完全不透明的颜色
+            pygame.draw.line(gradient_surf, (r, g, b, 255), (0, y), (width, y))
+        
+        return gradient_surf
+
+    def _render_text_with_gradient(self, font, text, outline_color, outline_width=2):
+        """渲染带描边和渐变色的文字（悬停时使用）"""
+        # 先渲染描边（在多个方向偏移）
+        offsets = [(-outline_width, -outline_width), (outline_width, -outline_width),
+                   (-outline_width, outline_width), (outline_width, outline_width),
+                   (0, -outline_width), (0, outline_width),
+                   (-outline_width, 0), (outline_width, 0)]
+        
+        # 先渲染文字作为遮罩（白色，用于提取渐变）
+        text_surf = font.render(text, True, (255, 255, 255))
+        w, h = text_surf.get_size()
+        
+        # 创建渐变 surface（与文字同尺寸）
+        gradient_surf = self._create_gradient_surface(w, h)
+        
+        # 创建最终 surface（包含描边和渐变文字）
+        final_surf = pygame.Surface((w + outline_width * 2, h + outline_width * 2), pygame.SRCALPHA)
+        
+        # 绘制描边
+        for offset_x, offset_y in offsets:
+            outline_text = font.render(text, True, outline_color)
+            final_surf.blit(outline_text, (outline_width + offset_x, outline_width + offset_y))
+        
+        # 绘制渐变文字：使用文字作为遮罩从渐变中提取颜色
+        # 创建一个临时 surface 来应用遮罩
+        text_mask = pygame.Surface((w, h), pygame.SRCALPHA)
+        text_mask.blit(text_surf, (0, 0))
+        
+        # 将渐变应用到文字遮罩上
+        for x in range(w):
+            for y in range(h):
+                _, _, _, alpha = text_mask.get_at((x, y))
+                if alpha > 0:
+                    r, g, b, _ = gradient_surf.get_at((x, y))
+                    text_mask.set_at((x, y), (r, g, b, alpha))
+        
+        # 将渐变文字绘制到最终 surface 上
+        final_surf.blit(text_mask, (outline_width, outline_width))
+        
+        return final_surf
+
     # ====================================================
     # 5. 主菜单 (状态: MENU)
     # ====================================================
@@ -590,8 +729,8 @@ class UI:
         # 距离顶部220px，距离右边距100px
         title_image = self.res.get_image('title')
         title_rect = title_image.get_rect()
-        title_rect.top = 200  # 距离顶部220px
-        title_rect.right = WINDOW_WIDTH - 100  # 距离右边距100px
+        title_rect.top = 150  
+        title_rect.right = WINDOW_WIDTH - 100  
         self.display_surface.blit(title_image, title_rect)
         
         # 3. 加载选项背景
@@ -607,6 +746,7 @@ class UI:
         
         # 计算第一个选项的中心 Y 坐标（需要知道背景高度）
         bg_height = choice_bg.get_height()
+        bg_width = choice_bg.get_width()
         first_option_center_y = first_option_top + bg_height // 2
         second_option_center_y = first_option_center_y + bg_height + option_spacing
         
@@ -615,44 +755,117 @@ class UI:
         
         mouse_pos = pygame.mouse.get_pos()
         
-        # 5. 绘制 "Started" 选项
+        # 5. 处理 "Started" 选项的悬停和缩放
         started_bg_rect = choice_bg.get_rect(center=(option_x, first_option_center_y))
-        self.display_surface.blit(choice_bg, started_bg_rect)
+        self.menu_started_hovered = started_bg_rect.collidepoint(mouse_pos)
         
-        # 渲染带描边的文字
-        started_text_surf = self._render_text_with_outline(
-            self.menu_button_font, "Started", 
-            (0, 0, 0),  # 黑色文字
-            (255, 255, 255),  # 白色描边
-            outline_width=2
-        )
-        started_text_rect = started_text_surf.get_rect(center=started_bg_rect.center)
-        self.display_surface.blit(started_text_surf, started_text_rect)
+        # 更新缩放因子（平滑动画）
+        target_scale = 1.1 if self.menu_started_hovered else 1.0
+        self.menu_started_scale += (target_scale - self.menu_started_scale) * 0.2
         
-        # 更新点击检测区域（使用背景区域）
-        self.menu_started_rect = started_bg_rect
+        # 计算缩放后的尺寸和位置
+        scaled_width = int(bg_width * self.menu_started_scale)
+        scaled_height = int(bg_height * self.menu_started_scale)
+        scaled_rect = pygame.Rect(0, 0, scaled_width, scaled_height)
+        scaled_rect.center = (option_x, first_option_center_y)
         
-        # 6. 绘制 "Quit" 选项
+        # 绘制按钮背景（只缩放，不改变颜色）
+        if abs(self.menu_started_scale - 1.0) > 0.01:
+            scaled_bg = pygame.transform.scale(choice_bg, (scaled_width, scaled_height))
+            self.display_surface.blit(scaled_bg, scaled_rect)
+        else:
+            self.display_surface.blit(choice_bg, started_bg_rect)
+        
+        # 渲染文字（悬停时使用渐变色，否则使用黑色）
+        if self.menu_started_hovered:
+            started_text_surf = self._render_text_with_gradient(
+                self.menu_button_font, "Started", 
+                (255, 255, 255),  # 白色描边
+                outline_width=2
+            )
+        else:
+            started_text_surf = self._render_text_with_outline(
+                self.menu_button_font, "Started", 
+                (0, 0, 0),  # 黑色文字
+                (255, 255, 255),  # 白色描边
+                outline_width=2
+            )
+        if abs(self.menu_started_scale - 1.0) > 0.01:
+            text_scaled = pygame.transform.scale(
+                started_text_surf, 
+                (int(started_text_surf.get_width() * self.menu_started_scale),
+                 int(started_text_surf.get_height() * self.menu_started_scale))
+            )
+            text_rect = text_scaled.get_rect(center=scaled_rect.center)
+            self.display_surface.blit(text_scaled, text_rect)
+        else:
+            started_text_rect = started_text_surf.get_rect(center=started_bg_rect.center)
+            self.display_surface.blit(started_text_surf, started_text_rect)
+        
+        # 更新点击检测区域（使用原始背景区域，但考虑缩放）
+        self.menu_started_rect = scaled_rect if abs(self.menu_started_scale - 1.0) > 0.01 else started_bg_rect
+        
+        # 6. 处理 "Quit" 选项的悬停和缩放
         quit_bg_rect = choice_bg.get_rect(center=(option_x, second_option_center_y))
-        self.display_surface.blit(choice_bg, quit_bg_rect)
+        self.menu_quit_hovered = quit_bg_rect.collidepoint(mouse_pos)
         
-        # 渲染带描边的文字
-        quit_text_surf = self._render_text_with_outline(
-            self.menu_button_font, "Quit",
-            (0, 0, 0),  # 黑色文字
-            (255, 255, 255),  # 白色描边
-            outline_width=2
-        )
-        quit_text_rect = quit_text_surf.get_rect(center=quit_bg_rect.center)
-        self.display_surface.blit(quit_text_surf, quit_text_rect)
+        # 更新缩放因子（平滑动画）
+        target_scale = 1.1 if self.menu_quit_hovered else 1.0
+        self.menu_quit_scale += (target_scale - self.menu_quit_scale) * 0.2
         
-        # 更新点击检测区域（使用背景区域）
-        self.menu_quit_rect = quit_bg_rect
+        # 计算缩放后的尺寸和位置
+        scaled_width = int(bg_width * self.menu_quit_scale)
+        scaled_height = int(bg_height * self.menu_quit_scale)
+        scaled_rect = pygame.Rect(0, 0, scaled_width, scaled_height)
+        scaled_rect.center = (option_x, second_option_center_y)
+        
+        # 绘制按钮背景（只缩放，不改变颜色）
+        if abs(self.menu_quit_scale - 1.0) > 0.01:
+            scaled_bg = pygame.transform.scale(choice_bg, (scaled_width, scaled_height))
+            self.display_surface.blit(scaled_bg, scaled_rect)
+        else:
+            self.display_surface.blit(choice_bg, quit_bg_rect)
+        
+        # 渲染文字（悬停时使用渐变色，否则使用黑色）
+        if self.menu_quit_hovered:
+            quit_text_surf = self._render_text_with_gradient(
+                self.menu_button_font, "Quit",
+                (255, 255, 255),  # 白色描边
+                outline_width=2
+            )
+        else:
+            quit_text_surf = self._render_text_with_outline(
+                self.menu_button_font, "Quit",
+                (0, 0, 0),  # 黑色文字
+                (255, 255, 255),  # 白色描边
+                outline_width=2
+            )
+        if abs(self.menu_quit_scale - 1.0) > 0.01:
+            text_scaled = pygame.transform.scale(
+                quit_text_surf, 
+                (int(quit_text_surf.get_width() * self.menu_quit_scale),
+                 int(quit_text_surf.get_height() * self.menu_quit_scale))
+            )
+            text_rect = text_scaled.get_rect(center=scaled_rect.center)
+            self.display_surface.blit(text_scaled, text_rect)
+        else:
+            quit_text_rect = quit_text_surf.get_rect(center=quit_bg_rect.center)
+            self.display_surface.blit(quit_text_surf, quit_text_rect)
+        
+        # 更新点击检测区域（使用原始背景区域，但考虑缩放）
+        self.menu_quit_rect = scaled_rect if abs(self.menu_quit_scale - 1.0) > 0.01 else quit_bg_rect
+        
+        # 绘制声音按钮（在主菜单也显示）
+        mouse_pos = pygame.mouse.get_pos()
+        self.sound_button.update(mouse_pos)
+        self.sound_button.draw(self.display_surface)
 
     def get_main_menu_click(self, mouse_pos):
-        """检测主菜单点击位置，返回 'start' 或 'quit' 或 None"""
+        """检测主菜单点击位置，返回 'start' 或 'quit' 或 'toggle_sound' 或 None"""
         if self.menu_started_rect and self.menu_started_rect.collidepoint(mouse_pos):
             return 'start'
         if self.menu_quit_rect and self.menu_quit_rect.collidepoint(mouse_pos):
             return 'quit'
+        if self.sound_button.check_click(mouse_pos, pygame.mouse.get_pressed()):
+            return 'toggle_sound'
         return None

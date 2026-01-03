@@ -7,6 +7,29 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
     :param spacing: 帧之间的空隙像素
     :param margin: 第一帧左侧的空隙像素
     """
+    # #region agent log
+    import json
+    log_data = {
+        "sessionId": "debug-session",
+        "runId": "run1",
+        "hypothesisId": "A",
+        "location": "vfx.py:slice_frames",
+        "message": "Frame slicing start",
+        "data": {
+            "frame_count": frame_count,
+            "frame_w": frame_w,
+            "spacing": spacing,
+            "margin": margin,
+            "sheet_size": sheet.get_size() if sheet else None
+        },
+        "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+    }
+    try:
+        with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+            f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+    except: pass
+    # #endregion
+    
     frames = []
     sheet_w, sheet_h = sheet.get_size()
     
@@ -26,17 +49,63 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
         # 这能防止 ValueError: subsurface rectangle outside surface area
         if x + frame_w > sheet_w:
             print(f"[VFX WARNING] Frame {i} out of bounds. Image W:{sheet_w}, Target X:{x+frame_w}")
+            # #region agent log
+            log_data = {
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "A",
+                "location": "vfx.py:slice_frames",
+                "message": "Frame out of bounds",
+                "data": {"frame_index": i, "sheet_w": sheet_w, "target_x": x + frame_w},
+                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+            }
+            try:
+                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+            except: pass
+            # #endregion
             break
             
         rect = pygame.Rect(x, 0, frame_w, sheet_h)
         try:
             frames.append(sheet.subsurface(rect))
-        except ValueError:
+        except ValueError as e:
+            # #region agent log
+            log_data = {
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "A",
+                "location": "vfx.py:slice_frames",
+                "message": "Subsurface ValueError",
+                "data": {"frame_index": i, "error": str(e)},
+                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+            }
+            try:
+                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+            except: pass
+            # #endregion
             break
             
     # 如果切割失败（比如图片太小切不出来），至少返回原图防止崩溃
     if not frames:
         frames.append(sheet)
+    
+    # #region agent log
+    log_data = {
+        "sessionId": "debug-session",
+        "runId": "run1",
+        "hypothesisId": "A",
+        "location": "vfx.py:slice_frames",
+        "message": "Frame slicing complete",
+        "data": {"expected_frames": frame_count, "actual_frames": len(frames)},
+        "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+    }
+    try:
+        with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+            f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+    except: pass
+    # #endregion
         
     return frames
 
@@ -60,7 +129,7 @@ class AnimationPlayer:
         margin = data_dict.get('margin', 0)
         
         # 2. 切割帧
-        self.frames = slice_frames(full_image, frame_count, frame_w)
+        self.frames = slice_frames(full_image, frame_count, frame_w, spacing, margin)
         
         # 3. 播放状态
         self.frame_index = 0
@@ -79,6 +148,7 @@ class AnimationPlayer:
             
         # 只有多帧才需要计算
         if len(self.frames) > 1:
+            old_index = int(self.frame_index)
             self.frame_index += self.animation_speed * dt
             
             if self.frame_index >= len(self.frames):
@@ -87,18 +157,94 @@ class AnimationPlayer:
                 else:
                     self.frame_index = len(self.frames) - 1
                     self.finished = True
+            
+            new_index = int(self.frame_index)
+            # #region agent log
+            import json
+            if old_index != new_index or self.frame_index >= len(self.frames):
+                log_data = {
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "C",
+                    "location": "vfx.py:update",
+                    "message": "Frame index changed",
+                    "data": {
+                        "old_index": old_index,
+                        "new_index": new_index,
+                        "frame_index_float": self.frame_index,
+                        "total_frames": len(self.frames),
+                        "animation_speed": self.animation_speed,
+                        "dt": dt,
+                        "loop": loop
+                    },
+                    "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+                }
+                try:
+                    with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+                        f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+                except: pass
+            # #endregion
         
-        return self.frames[int(self.frame_index)]
+        frame_idx = int(self.frame_index)
+        if frame_idx >= len(self.frames):
+            frame_idx = len(self.frames) - 1
+        if frame_idx < 0:
+            frame_idx = 0
+        return self.frames[frame_idx]
     
     # 获取当前帧+缩放函数
     def get_frame_image(self, dt, loop=True, scale=1.0):
         raw_img = self.update(dt, loop)
+        # #region agent log
+        import json
+        log_data = {
+            "sessionId": "debug-session",
+            "runId": "run1",
+            "hypothesisId": "C",
+            "location": "vfx.py:get_frame_image",
+            "message": "Getting frame image",
+            "data": {
+                "dt": dt,
+                "loop": loop,
+                "scale": scale,
+                "frame_index": int(self.frame_index) if hasattr(self, 'frame_index') else -1,
+                "total_frames": len(self.frames) if hasattr(self, 'frames') else 0,
+                "raw_img_is_none": raw_img is None,
+                "raw_img_size": raw_img.get_size() if raw_img else None
+            },
+            "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+        }
+        try:
+            with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+                f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+        except: pass
+        # #endregion
         if not raw_img: return None
         
         if scale != 1.0:
             w = int(raw_img.get_width() * scale)
             h = int(raw_img.get_height() * scale)
-            return pygame.transform.scale(raw_img, (w, h))
+            scaled_img = pygame.transform.scale(raw_img, (w, h))
+            # #region agent log
+            log_data = {
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "E",
+                "location": "vfx.py:get_frame_image",
+                "message": "Scaled image",
+                "data": {
+                    "original_size": raw_img.get_size(),
+                    "scaled_size": scaled_img.get_size(),
+                    "scale": scale
+                },
+                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
+            }
+            try:
+                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
+                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
+            except: pass
+            # #endregion
+            return scaled_img
         return raw_img
         
     def get_all_frames(self):
@@ -144,22 +290,46 @@ class FlashEffect(pygame.sprite.Sprite):
 
 class Explosion(pygame.sprite.Sprite):
     """死亡/爆炸特效"""
-    def __init__(self, pos, groups, texture, frame_count=5, scale=2.0):
+    def __init__(self, pos, groups, texture, frame_count=12, scale=2.0):
         super().__init__(groups)
         self.z_layer = LAYERS['vfx_top']
-        self.frames = slice_frames(texture, frame_count)
         
-        # [修改] 构造一个临时的 data_dict 给 AnimationPlayer 用
-        # 这样我们就不需要手动写 slice_frames 和 update 逻辑了
+        # [优化] 明确设置每帧大小为 64x64，确保正确裁切
+        # 期望每帧大小为 64x64
+        frame_width = 64
+        frame_height = 64
+        
+        # 构造 data_dict 给 AnimationPlayer 用
         anim_data = {
             'frames': frame_count,
-            'frame_width': 0, # 0 = 自动计算
+            'frame_width': frame_width,  # 明确设置为 64
             'spacing': 0,
             'margin': 0
         }
         
-        # 使用 AnimationPlayer
+        # 使用 AnimationPlayer 进行帧切割
         self.anim_player = AnimationPlayer(texture, anim_data, default_speed=20)
+        
+        # [关键修复] 确保每帧都是 64x64 大小
+        # slice_frames 使用整个图片高度作为帧高度，所以需要后处理确保每帧都是 64x64
+        for i, frame in enumerate(self.anim_player.frames):
+            frame_w, frame_h = frame.get_size()
+            if frame_w != frame_width or frame_h != frame_height:
+                # 如果尺寸不匹配，进行裁切或缩放
+                if frame_w >= frame_width and frame_h >= frame_height:
+                    # 裁切到中心 64x64 区域（从中心裁切）
+                    x_offset = (frame_w - frame_width) // 2
+                    y_offset = (frame_h - frame_height) // 2
+                    rect = pygame.Rect(x_offset, y_offset, frame_width, frame_height)
+                    try:
+                        self.anim_player.frames[i] = frame.subsurface(rect)
+                    except ValueError:
+                        # 如果裁切失败，使用缩放
+                        self.anim_player.frames[i] = pygame.transform.scale(frame, (frame_width, frame_height))
+                else:
+                    # 如果更小，则缩放
+                    self.anim_player.frames[i] = pygame.transform.scale(frame, (frame_width, frame_height))
+        
         self.scale = scale
         
         # 初始化第一帧
