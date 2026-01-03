@@ -174,7 +174,7 @@
         "name": "大火系魔杖",
         "type": "projectile",
         "image": "bigfire_wand",
-        "effect": "bullet3007", 
+        "effect": "bullet3016", 
         "cooldown": 500,
         "damage": 30,
         "speed": 400,
@@ -185,11 +185,11 @@
         "name": "大冰系魔杖",
         "type": "projectile",
         "image": "bigice_wand",
-        "effect": "bullet3008", 
+        "effect": "bullet3017", 
         "cooldown": 500,
         "damage": 30,
         "speed": 400,
-        "data": { "frames": 4, "frame_width": 32, "scale": 1.5 } 
+        "data": { "frames": 3, "frame_width": 32, "scale": 1.5 } 
     }
 
 ]
