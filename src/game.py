@@ -206,6 +206,9 @@ class Game:
         elif self.state == 'TUTORIAL':
             pass  # 教程状态下不更新游戏逻辑
         elif self.state == 'PLAYING':
+            # 确保玩家存在
+            if self.player is None:
+                return
             self.all_sprites.update(dt)
             self.enemy_spawner(dt)
 
@@ -232,8 +235,45 @@ class Game:
         elif self.state == 'GAME_OVER':
             pass
 
+    def cleanup_game(self):
+        """清理游戏资源（地图、玩家、敌人等）"""
+        # 清空所有精灵
+        self.all_sprites.empty()
+        self.obstacle_sprites.empty()
+        self.enemy_sprites.empty()
+        
+        # 重置音频管理器
+        self.audio_manager.reset()
+        
+        # 清理玩家引用（如果存在）
+        self.player = None
+        
+        # 重置数值
+        self.spawn_timer = 0
+    
+    def start_new_game(self):
+        """开始新游戏：清理资源并重新生成地图和玩家，进入教程状态"""
+        # 先清理旧资源
+        self.cleanup_game()
+        
+        # 重新生成地图和玩家
+        self.map_manager.generate_forest()
+        spawn_pos = self.map_manager.spawn_point
+        self.player = Player(
+            pos=spawn_pos, 
+            groups=[self.all_sprites], 
+            obstacle_sprites=self.obstacle_sprites,
+            enemy_sprites=self.enemy_sprites,
+            resource_manager=self.loader
+        )
+        
+        # 重置数值
+        self.spawn_timer = 0
+        # 状态设为 TUTORIAL，让玩家先看教程
+        self.state = 'TUTORIAL'
+    
     def reset_game(self):
-        """[新增] 快速重置游戏状态"""
+        """[新增] 快速重置游戏状态（用于游戏中的重新开始）"""
         # 清空所有精灵
         self.all_sprites.empty()
         self.obstacle_sprites.empty()
@@ -266,8 +306,10 @@ class Game:
             self.screen.fill(COLORS['bg_void'])
             
             # 始终绘制游戏内容（包括教程状态下）
-            self.all_sprites.custom_draw(self.player)
-            self.ui.draw_hud(self.player)  # draw_hud 中已包含声音按钮
+            # 确保玩家存在时才绘制
+            if self.player is not None:
+                self.all_sprites.custom_draw(self.player)
+                self.ui.draw_hud(self.player)  # draw_hud 中已包含声音按钮
             
             if self.state == 'TUTORIAL':
                 # 教程状态下在游戏画面上叠加教程界面
@@ -348,7 +390,8 @@ class Game:
                             # 停止主页 BGM，避免与开始游戏音效重叠
                             self.audio_manager.stop_bgm()
                             self.audio_manager.play_sfx('sfx_startgame', volume=0.7)
-                            self.state = 'TUTORIAL'
+                            # 开始新游戏：清理旧资源并重新生成地图和玩家，进入教程状态
+                            self.start_new_game()
                         elif action == 'quit':
                             self.running = False
                         elif action == 'toggle_sound':
@@ -377,7 +420,10 @@ class Game:
                         if action == 'resume': self.state = 'PLAYING'
                         elif action == 'restart': self.reset_game()
                         elif action == 'quit': self.running = False
-                        elif action == 'home': self.state = 'MENU'
+                        elif action == 'home': 
+                            # 返回主界面时清理所有游戏资源
+                            self.cleanup_game()
+                            self.state = 'MENU'
                         elif action == 'pause_game': self.state = 'PAUSED'
                         elif action == 'toggle_sound':
                             is_muted = self.audio_manager.toggle_mute()
