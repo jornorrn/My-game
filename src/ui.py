@@ -182,12 +182,18 @@ class UI:
             self.info_font = pygame.font.Font('assets/fonts/pixel.ttf', 30)
             self.card_title_font = pygame.font.Font('assets/fonts/pixel.ttf', 32)
             self.card_desc_font = pygame.font.Font('assets/fonts/pixel.ttf', 20)
+            # 主菜单字体
+            self.menu_title_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 120)
+            self.menu_button_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 48)
         except:
             self.font = pygame.font.Font(None, 24)
             self.title_font = pygame.font.Font(None, 60)
             self.info_font = pygame.font.Font(None, 30)
             self.card_title_font = pygame.font.Font(None, 40)
             self.card_desc_font = pygame.font.Font(None, 24)
+            # 主菜单字体 fallback
+            self.menu_title_font = pygame.font.Font(None, 120)
+            self.menu_button_font = pygame.font.Font(None, 48)
         # 加载光标
         self.cursor_ptr = self.res.get_image('pointer') # 默认箭头
         self.cursor_hov = self.res.get_image('cursor')  # 悬停手势
@@ -225,6 +231,23 @@ class UI:
         self.card_bg = self.res.get_image('banner_slots')
         self._init_buttons()
         self.level_up_cards = []
+        
+        # 加载新手引导图片
+        self.guide_image = self.res.get_image('guide')
+        
+        # 创建灰色半透明遮罩（用于教程，能看到游戏画面）
+        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.tutorial_mask.fill((100, 100, 100))  # 灰色
+        self.tutorial_mask.set_alpha(180)  # 透明度
+        
+        # 加载主菜单背景图片
+        self.menu_bg = self.res.get_image('cover')
+        # 缩放背景图片到窗口大小
+        self.menu_bg = pygame.transform.scale(self.menu_bg, (WINDOW_WIDTH, WINDOW_HEIGHT))
+        
+        # 主菜单按钮文本和位置（用于点击检测）
+        self.menu_started_rect = None
+        self.menu_quit_rect = None
 
     def _init_buttons(self):
         """组装所有按钮"""
@@ -276,6 +299,14 @@ class UI:
         
         # 检查是否悬停在任何活跃按钮上
         hovering = False
+        
+        # 检查主菜单按钮
+        if hasattr(self, 'menu_started_rect') and self.menu_started_rect:
+            if self.menu_started_rect.collidepoint(mouse_pos):
+                hovering = True
+        if hasattr(self, 'menu_quit_rect') and self.menu_quit_rect:
+            if self.menu_quit_rect.collidepoint(mouse_pos):
+                hovering = True
         
         # 收集当前屏幕上所有可能交互的按钮
         active_lists = [self.hud_buttons] # HUD 按钮总是活跃
@@ -495,4 +526,70 @@ class UI:
         for btn in target_buttons:
             if btn.check_click(mouse_pos, mouse_pressed):
                 return btn.action_name
+        return None
+
+    # ====================================================
+    # 4. 新手引导教程 (状态: TUTORIAL)
+    # ====================================================
+    def draw_tutorial(self):
+        """绘制新手引导教程"""
+        # 1. 绘制灰色半透明遮罩（能看到游戏画面）
+        self.display_surface.blit(self.tutorial_mask, (0, 0))
+        
+        # 2. 居中显示 guide.png
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        guide_rect = self.guide_image.get_rect(center=(cx, cy))
+        self.display_surface.blit(self.guide_image, guide_rect)
+        
+        # 存储 guide_rect 以便点击检测
+        self.guide_rect = guide_rect
+
+    def check_tutorial_click(self, mouse_pos):
+        """检测点击是否在 guide.png 区域外，返回 True 表示应该关闭教程"""
+        if hasattr(self, 'guide_rect'):
+            # 如果点击位置不在 guide_rect 内，返回 True（关闭教程）
+            return not self.guide_rect.collidepoint(mouse_pos)
+        return True
+
+    # ====================================================
+    # 5. 主菜单 (状态: MENU)
+    # ====================================================
+    def draw_main_menu(self):
+        """绘制主菜单"""
+        # 1. 绘制背景图片
+        self.display_surface.blit(self.menu_bg, (0, 0))
+        
+        # 2. 绘制标题 "MysticEcho"
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        title_surf = self.menu_title_font.render("MysticEcho", False, (255, 255, 255))
+        title_rect = title_surf.get_rect(center=(cx, 150))
+        self.display_surface.blit(title_surf, title_rect)
+        
+        # 3. 绘制按钮文本
+        mouse_pos = pygame.mouse.get_pos()
+        
+        # "Started" 按钮
+        started_surf = self.menu_button_font.render("Started", False, (255, 255, 255))
+        started_rect = started_surf.get_rect(center=(cx, cy + 80))
+        # 悬停效果：改变颜色
+        if started_rect.collidepoint(mouse_pos):
+            started_surf = self.menu_button_font.render("Started", False, (255, 255, 0))
+        self.display_surface.blit(started_surf, started_rect)
+        self.menu_started_rect = started_rect
+        
+        # "Quit" 按钮
+        quit_surf = self.menu_button_font.render("Quit", False, (255, 255, 255))
+        quit_rect = quit_surf.get_rect(center=(cx, cy + 150))
+        # 悬停效果：改变颜色
+        if quit_rect.collidepoint(mouse_pos):
+            quit_surf = self.menu_button_font.render("Quit", False, (255, 255, 0))
+        self.display_surface.blit(quit_surf, quit_rect)
+        self.menu_quit_rect = quit_rect
+
+    def get_main_menu_click(self, mouse_pos):
+        """检测主菜单点击位置，返回 'start' 或 'quit' 或 None"""
+        if self.menu_started_rect and self.menu_started_rect.collidepoint(mouse_pos):
+            return 'start'
+        if self.menu_quit_rect and self.menu_quit_rect.collidepoint(mouse_pos):
+            return 'quit'
         return None

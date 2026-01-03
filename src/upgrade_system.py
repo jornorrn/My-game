@@ -46,7 +46,7 @@ class WeaponAddUpgrade(UpgradeOption):  #type: weapon_add
     def apply(self, player):
         w_id = int(self.raw_data['weapon_id'])
         print(f"[UPGRADE] Adding Weapon ID: {w_id}")
-        player.weapon_controller.equipped_weapons.append(w_id)
+        player.weapon_controller.add_weapon(w_id)
 
 class WeaponBuffUpgrade(UpgradeOption):
     """

@@ -80,3 +80,7 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# 项目特定忽略
+src/__init__.py
+src/__pycache__/

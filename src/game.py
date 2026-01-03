@@ -44,14 +44,14 @@ class Game:
 
         self.ui = UI(self.screen, self.loader) 
         
-        self.state = 'PLAYING' 
+        self.state = 'MENU' 
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 
         
-        # [修改] 动态间隔: 基础1200ms - (等级-1)*50ms，最低200ms
-        # 建议后续将 1200 提取为 settings.SPAWN_INTERVAL_BASE
-        current_interval = max(200, 1200 - (self.player.level - 1) * 50)
+        # [修改] 动态间隔: 基础间隔 - (等级-1)*减少量，最低最小间隔
+        current_interval = max(SPAWN_INTERVAL_MIN, 
+                              SPAWN_INTERVAL_BASE - (self.player.level - 1) * SPAWN_INTERVAL_DECREASE)
         
         if self.spawn_timer >= current_interval:
             self.spawn_timer = 0
@@ -90,7 +90,11 @@ class Game:
                     break
 
     def update(self, dt):
-        if self.state == 'PLAYING':
+        if self.state == 'MENU':
+            pass  # 主菜单状态下不更新游戏逻辑
+        elif self.state == 'TUTORIAL':
+            pass  # 教程状态下不更新游戏逻辑
+        elif self.state == 'PLAYING':
             self.all_sprites.update(dt)
             self.enemy_spawner(dt)
 
@@ -125,24 +129,41 @@ class Game:
         self.enemy_sprites.empty()
         
         # 重新生成地图和玩家
-        self.setup_test_map()
+        self.map_manager.generate_forest()
+        spawn_pos = self.map_manager.spawn_point
+        self.player = Player(
+            pos=spawn_pos, 
+            groups=[self.all_sprites], 
+            obstacle_sprites=self.obstacle_sprites,
+            enemy_sprites=self.enemy_sprites,
+            resource_manager=self.loader
+        )
         
         # 重置数值
         self.spawn_timer = 0
         self.state = 'PLAYING'
-        self.death_timer = 0
 
     def draw(self):
-        self.screen.fill(COLORS['bg_void'])
-        self.all_sprites.custom_draw(self.player)
-        self.ui.draw_hud(self.player)
-
-        if self.state == 'PAUSED':
-            self.ui.draw_pause()
-        elif self.state == 'GAME_OVER':
-            self.ui.draw_game_over()
-        elif self.state == 'LEVEL_UP':
-            self.ui.draw_level_up()
+        if self.state == 'MENU':
+            # 主菜单状态：只绘制主菜单
+            self.ui.draw_main_menu()
+        else:
+            # 其他状态：绘制游戏内容
+            self.screen.fill(COLORS['bg_void'])
+            
+            # 始终绘制游戏内容（包括教程状态下）
+            self.all_sprites.custom_draw(self.player)
+            self.ui.draw_hud(self.player)
+            
+            if self.state == 'TUTORIAL':
+                # 教程状态下在游戏画面上叠加教程界面
+                self.ui.draw_tutorial()
+            elif self.state == 'PAUSED':
+                self.ui.draw_pause()
+            elif self.state == 'GAME_OVER':
+                self.ui.draw_game_over()
+            elif self.state == 'LEVEL_UP':
+                self.ui.draw_level_up()
 
         self.ui.draw_custom_cursor()
         pygame.display.update()
@@ -161,8 +182,21 @@ class Game:
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
+                    mouse_pos = pygame.mouse.get_pos()
+                    
+                    # 主菜单点击处理
+                    if self.state == 'MENU':
+                        action = self.ui.get_main_menu_click(mouse_pos)
+                        if action == 'start':
+                            self.state = 'TUTORIAL'
+                        elif action == 'quit':
+                            self.running = False
+                    # 新手引导教程：点击图片外区域关闭
+                    elif self.state == 'TUTORIAL':
+                        if self.ui.check_tutorial_click(mouse_pos):
+                            self.state = 'PLAYING'
                     # 传入当前 state，让 UI 判断检测哪组按钮
-                    if self.state in ['PAUSED', 'GAME_OVER', 'PLAYING']:
+                    elif self.state in ['PAUSED', 'GAME_OVER', 'PLAYING']:
                         action = self.ui.get_click_action(self.state)
                         if action == 'resume': self.state = 'PLAYING'
                         elif action == 'restart': self.reset_game()

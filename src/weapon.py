@@ -293,9 +293,11 @@ class WeaponController:
         # 或者更简单：每帧检查数量是否变化，变了就全删重生成（Roguelite中升级不频繁，这很安全且能保证排列整齐）
         self.orbital_sprites = pygame.sprite.Group()
         self.aura_sprites = pygame.sprite.Group()
+        # 标记武器列表是否变化，避免每帧检查
+        self._weapons_changed = False
 
     def update(self):
-        if pygame.time.get_ticks() % 1000 < 20:
+        if DEBUG_WEAPON and pygame.time.get_ticks() % 1000 < 20:
              print(f"[WEAPON DEBUG] Holding {len(self.equipped_weapons)} weapons. Cooldowns len: {len(self.cooldowns)}")
 
         current_time = pygame.time.get_ticks()
@@ -310,34 +312,33 @@ class WeaponController:
             total_counts[w_id] = total_counts.get(w_id, 0) + 1
             
         # 3. 处理环绕物 (Orbital) 和光环（Aura）的生成与同步
-        # 策略：检查当前持有的环绕物总数 vs 场景里的 Sprite 总数
-        # 如果不一致，说明刚升级了，直接清空重画（确保 360 度均匀分布）
-        
-        # 统计当前应该有多少个环绕物和光环
-        target_orbitals = []
-        target_auras = []
-        for w_id in self.equipped_weapons:
-            w_data = self.res.data['weapons'].get(w_id)
-            if not w_data: continue
-            w_type = w_data.get('type', 'projectile')
-            if w_type == 'orbital': target_orbitals.append(w_id)
-            elif w_type == 'aura': target_auras.append(w_id)
-                
-        # 如果数量不对 (通常是变多了)，重置所有环绕物和光环
-        if len(self.aura_sprites) != len(target_auras): self._respawn_auras(target_auras)
-        if len(self.orbital_sprites) != len(target_orbitals): self._respawn_orbitals(target_orbitals)
+        # 策略：只在武器列表变化时检查并重新生成（避免每帧检查）
+        if self._weapons_changed:
+            # 统计当前应该有多少个环绕物和光环
+            target_orbitals = []
+            target_auras = []
+            for w_id in self.equipped_weapons:
+                w_data = self.res.data['weapons'].get(w_id)
+                if not w_data: continue
+                w_type = w_data.get('type', 'projectile')
+                if w_type == 'orbital': target_orbitals.append(w_id)
+                elif w_type == 'aura': target_auras.append(w_id)
+                    
+            # 如果数量不对，重置所有环绕物和光环
+            if len(self.aura_sprites) != len(target_auras): 
+                self._respawn_auras(target_auras)
+            if len(self.orbital_sprites) != len(target_orbitals): 
+                self._respawn_orbitals(target_orbitals)
+            
+            self._weapons_changed = False
 
         processed_rank = {}
 
         # 4. 按【索引】遍历，实现独立冷却
-         # 4. 处理发射型 (Projectile)
+        # 4. 处理发射型 (Projectile)
         mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
         screen_center = pygame.math.Vector2(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
         direction = mouse_pos - screen_center
-
-        total_counts = {}
-        for w_id in self.equipped_weapons: total_counts[w_id] = total_counts.get(w_id, 0) + 1
-        processed_rank = {}
 
         # [关键] 只有 type='projectile' (或没写type默认是projectile) 才执行发射逻辑
         for i, w_id in enumerate(self.equipped_weapons):
@@ -398,6 +399,11 @@ class WeaponController:
             
             Aura(self.player, [self.groups, self.aura_sprites], 
                  self.enemy_sprites, aura_data)
+
+    def add_weapon(self, weapon_id):
+        """添加武器并标记变化"""
+        self.equipped_weapons.append(weapon_id)
+        self._weapons_changed = True
 
     def fire(self, w_data, direction, angle_offset):
         player_pos = pygame.math.Vector2(self.player.rect.center)

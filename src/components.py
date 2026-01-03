@@ -93,7 +93,6 @@ class Shadow(pygame.sprite.Sprite):
         self.z_layer = LAYERS['vfx_bottom']
         # [修复] 添加 hitbox 防止 collision 检测报错
         self.hitbox = self.rect 
-        self._update_pos()
         
         # 初始位置
         self._update_pos()

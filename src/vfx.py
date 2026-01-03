@@ -1,5 +1,4 @@
 import pygame
-import settings
 from src.settings import *
 
 def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
@@ -133,11 +132,11 @@ class FlashEffect(pygame.sprite.Sprite):
         self.duration = duration * 1000
         self.start_time = pygame.time.get_ticks()
         
-        # 复制图像, 创建mask，填充白色
-        self.image = pygame.Surface(self.target.image.get_size(), pygame.SRCALPHA)
-        mask = pygame.mask.from_surface(self.target.image)
-        mask_surf = mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
+        # 创建初始 mask 和图像
+        self.base_mask = pygame.mask.from_surface(self.target.image)
+        mask_surf = self.base_mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
         self.image = mask_surf
+        self.last_image_size = self.target.image.get_size()
         
         self.rect = self.target.rect.copy()
         self.hitbox = self.rect.copy() 
@@ -146,10 +145,13 @@ class FlashEffect(pygame.sprite.Sprite):
         # 跟随目标
         if self.target.alive():
             self.rect.center = self.target.rect.center
-            # 实时更新形状（适配动画）
-            self.image = pygame.Surface(self.target.image.get_size(), pygame.SRCALPHA)
-            mask = pygame.mask.from_surface(self.target.image)
-            self.image = mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
+            # 只在目标图像大小变化时更新 mask（适配动画）
+            current_size = self.target.image.get_size()
+            if current_size != self.last_image_size:
+                self.base_mask = pygame.mask.from_surface(self.target.image)
+                mask_surf = self.base_mask.to_surface(setcolor=(255, 255, 255, 200), unsetcolor=(0,0,0,0))
+                self.image = mask_surf
+                self.last_image_size = current_size
             self.hitbox = self.rect.copy() # 同步 hitbox
         else:
             self.kill()

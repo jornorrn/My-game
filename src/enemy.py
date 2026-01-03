@@ -9,7 +9,6 @@ class Enemy(Entity):
         
         self.player = player
         self.set_obstacles(obstacle_sprites)
-        data = resource_manager.data['enemies'][enemy_id]
         self.res = resource_manager
         # 数据读取
         data = resource_manager.data['enemies'][enemy_id]
@@ -27,9 +26,6 @@ class Enemy(Entity):
         
         # 初始化图像
         self.image = self.anim_player.get_frame_image(0, loop=True, scale=self.scale)
-            
-        self.rect = self.image.get_rect(topleft=pos)
-        self.hitbox = self.rect.inflate(-10, -10)
 
         # 生成阴影
         shadow_img = self.res.get_image('shadows')
@@ -81,7 +77,6 @@ class Enemy(Entity):
             return
         self.player.xp += self.stats.get('xp', 10)
         print(f"[DEBUG] Enemy died. Player XP: {self.player.xp}")
-        self.kill()
         # 播放死亡爆炸动画
         expl_surf = self.res.get_image('vfx_explosion') 
         if expl_surf.get_width() > 32:
