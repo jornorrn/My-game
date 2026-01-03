@@ -225,6 +225,14 @@ class UI:
         self.card_bg = self.res.get_image('banner_slots')
         self._init_buttons()
         self.level_up_cards = []
+        
+        # 加载新手引导图片
+        self.guide_image = self.res.get_image('guide')
+        
+        # 创建灰色半透明遮罩（用于教程，能看到游戏画面）
+        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.tutorial_mask.fill((100, 100, 100))  # 灰色
+        self.tutorial_mask.set_alpha(180)  # 透明度
 
     def _init_buttons(self):
         """组装所有按钮"""
@@ -496,3 +504,26 @@ class UI:
             if btn.check_click(mouse_pos, mouse_pressed):
                 return btn.action_name
         return None
+
+    # ====================================================
+    # 4. 新手引导教程 (状态: TUTORIAL)
+    # ====================================================
+    def draw_tutorial(self):
+        """绘制新手引导教程"""
+        # 1. 绘制灰色半透明遮罩（能看到游戏画面）
+        self.display_surface.blit(self.tutorial_mask, (0, 0))
+        
+        # 2. 居中显示 guide.png
+        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        guide_rect = self.guide_image.get_rect(center=(cx, cy))
+        self.display_surface.blit(self.guide_image, guide_rect)
+        
+        # 存储 guide_rect 以便点击检测
+        self.guide_rect = guide_rect
+
+    def check_tutorial_click(self, mouse_pos):
+        """检测点击是否在 guide.png 区域外，返回 True 表示应该关闭教程"""
+        if hasattr(self, 'guide_rect'):
+            # 如果点击位置不在 guide_rect 内，返回 True（关闭教程）
+            return not self.guide_rect.collidepoint(mouse_pos)
+        return True
