@@ -55,7 +55,7 @@ class AnimationPlayer:
         # 1. 解析配置
         # data_dict 通常是 json 里的 "data" 字段
         frame_count = data_dict.get('frames', 1)
-        frame_w = data_dict.get('frame_width', 0) # 为什么默认宽度为0？
+        frame_w = data_dict.get('frame_width', 0) 
          # [新增] 读取间距参数
         spacing = data_dict.get('spacing', 0)
         margin = data_dict.get('margin', 0)
@@ -165,20 +165,33 @@ class Explosion(pygame.sprite.Sprite):
         self.z_layer = LAYERS['vfx_top']
         self.frames = slice_frames(texture, frame_count)
         
-        # [新增] 预先缩放所有帧
-        if scale != 1.0:
-            self.frames = [pygame.transform.scale(f, (int(f.get_width()*scale), int(f.get_height()*scale))) for f in self.frames]
-
-        self.frame_index = 0
-        self.animation_speed = 20 # 播放速度快一点
-        self.image = self.frames[0]
+        # [修改] 构造一个临时的 data_dict 给 AnimationPlayer 用
+        # 这样我们就不需要手动写 slice_frames 和 update 逻辑了
+        anim_data = {
+            'frames': frame_count,
+            'frame_width': 0, # 0 = 自动计算
+            'spacing': 0,
+            'margin': 0
+        }
+        
+        # 使用 AnimationPlayer
+        self.anim_player = AnimationPlayer(texture, anim_data, default_speed=20)
+        self.scale = scale
+        
+        # 初始化第一帧
+        self.image = self.anim_player.get_frame_image(0, loop=False, scale=self.scale)
         self.rect = self.image.get_rect(center=pos)
-        self.hitbox = self.rect.copy() # 占位，避免报错
+        self.hitbox = self.rect.copy()
 
     def update(self, dt):
-        self.frame_index += self.animation_speed * dt
-        if self.frame_index >= len(self.frames):
-            self.kill() # 播完自杀
-        else:
-            self.image = self.frames[int(self.frame_index)]
+        # get_frame_image 内部处理了帧更新
+        # loop=False: 播放完会停止在最后一帧 (finished=True)
+        img = self.anim_player.get_frame_image(dt, loop=False, scale=self.scale)
+        
+        if self.anim_player.finished:
+            self.kill()
+        elif img:
+            self.image = img
+            # 保持中心不动
+            self.rect = self.image.get_rect(center=self.rect.center)
 

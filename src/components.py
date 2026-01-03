@@ -180,46 +180,47 @@ class AnimatedTile(Tile):
         
         # 使用通用动画播放器
         # frame_data 格式: {'frames': 16, 'frame_width': 192, 'speed': 10}
-        self.anim_player = AnimationPlayer(surface, frame_data, default_speed=frame_data.get('speed', 5))
+        self.anim_player = AnimationPlayer(surface, frame_data, default_speed=frame_data.get('speed', 8))
         self.visual_scale = visual_scale
         self.offset = offset # (x, y) 修正渲染位置
         
         # 初始化第一帧 (dt=0)
         self.image = self.anim_player.get_frame_image(0, loop=True, scale=self.visual_scale)
-        # 重新定位 Rect
-        # 注意：pos 是网格坐标 (32x32格子左上角)
-        # 如果素材很大(水面)，我们需要让素材中心 对齐 网格中心
-        self.rect = self.image.get_rect(center=(pos[0] + TILE_SIZE//2 + offset[0], 
-                                                pos[1] + TILE_SIZE//2 + offset[1]))
-        # 2. [核心逻辑] 定位 Rect 和 Hitbox
-        # pos: 网格左上角 (例如 320, 320)
-        # grid_bottom: 网格底部中心 (320+16, 320+32)
-        
-        # 先把 rect 放在 pos
-        self.rect = self.image.get_rect(topleft=pos)
+        # 3. 设置 Hitbox (物理真理)
+        # 判定箱严格位于网格坐标 pos，大小为 TILE_SIZE
+        self.hitbox = pygame.Rect(pos[0], pos[1], TILE_SIZE, TILE_SIZE).inflate(-10,-10)
+
+        # 4. 设置 Image Rect (视觉对齐)
+        self.rect = self.image.get_rect()
         
         if sprite_type == 'tree':
             self.z_layer = LAYERS['main']
-            
-            # [关键] 让图片的"底部中心"，对齐"网格的底部中心" + 偏移量
-            # 这样无论树多高、多宽，它的根部永远踩在格子里
-            grid_bottom_center_x = pos[0] + TILE_SIZE // 2 + offset[0]
-            grid_bottom_y = pos[1] + TILE_SIZE + offset[1]
-            
-            self.rect.midbottom = (grid_bottom_center_x, grid_bottom_y)
-            
-            # [关键] 判定箱：严格等于网格大小 (32x32)，位于 pos
-            # inflate(-10, -10) 让判定箱比格子稍小，手感更好
-            self.hitbox = pygame.Rect(pos[0], pos[1], TILE_SIZE, TILE_SIZE).inflate(-10, -10)
+            # [核心对齐]：图片的底边中心 = 判定箱的底边中心 + 偏移量
+            # 只要你裁剪了图片底部的透明像素，这行代码能保证树根就在判定箱里
+            target_x = self.hitbox.centerx + offset[0]
+            target_y = self.hitbox.bottom + offset[1]
+            self.rect.midbottom = (target_x, target_y)
 
         else:
             # 默认逻辑 (居中)
             self.rect = self.image.get_rect(center=(pos[0] + TILE_SIZE//2, pos[1] + TILE_SIZE//2))
             self.z_layer = LAYERS['ground']
             self.hitbox = self.rect
-            
+
     def update(self, dt):
+        # 记录旧的对齐点 (对于树木是底部，对于其他可能是中心)
+        old_midbottom = self.rect.midbottom
+        old_center = self.rect.center
+        
+        # 更新图像
         self.image = self.anim_player.get_frame_image(dt, loop=True, scale=self.visual_scale)
+        self.rect = self.image.get_rect()
+        
+        # 恢复位置
+        if self.sprite_type == 'tree':
+            self.rect.midbottom = old_midbottom
+        else:
+            self.rect.center = old_center
 
 class YSortCameraGroup(pygame.sprite.Group):
     """

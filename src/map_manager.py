@@ -82,10 +82,10 @@ class MapManager:
         # 树木(8帧, 宽1536 -> 单帧192) 
         # 缩放到 0.3 -> 57x76 (约占 2x2 格)
         tree_configs = [
-            {'key': 'obs_tree1_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': -40},
-            {'key': 'obs_tree2_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': -40},
-            {'key': 'obs_tree3_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': -40},
-            {'key': 'obs_tree4_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': -40}
+            {'key': 'obs_tree1_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': 0},
+            {'key': 'obs_tree2_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': 0},
+            {'key': 'obs_tree3_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': 0},
+            {'key': 'obs_tree4_anim', 'frames': 8, 'frame_width': 192, 'scale': 1.0, 'offset_y': 0}
         ]
         
         # --- 实例化 ---

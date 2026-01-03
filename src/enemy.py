@@ -77,10 +77,14 @@ class Enemy(Entity):
             self.die()
 
     def die(self):
-        print(f"[DEBUG] Enemy died.")
+        if not self.groups():
+            return
         self.player.xp += self.stats.get('xp', 10)
         print(f"[DEBUG] Enemy died. Player XP: {self.player.xp}")
         self.kill()
         # 播放死亡爆炸动画
         expl_surf = self.res.get_image('vfx_explosion') 
-        Explosion(self.rect.center, self.groups(), expl_surf, frame_count=5, scale=2.5)
+        if expl_surf.get_width() > 32:
+             Explosion(self.rect.center, self.groups(), expl_surf, frame_count=5, scale=2.5)
+        
+        self.kill()
