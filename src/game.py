@@ -44,7 +44,7 @@ class Game:
 
         self.ui = UI(self.screen, self.loader) 
         
-        self.state = 'MENU' 
+        self.state = 'MENU'
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 

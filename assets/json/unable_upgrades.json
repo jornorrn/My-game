@@ -1,0 +1,80 @@
+[
+    {
+        "id": 1027,
+        "title": "火焰精通",
+        "desc": "火系魔杖：伤害翻倍, 体积+50%",
+        "image": "upgrade_3001",
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "3002",
+            "mode": "mult",
+            "effects": { "damage": 2, "data.scale": 1.5 }
+        }
+    },
+    {
+        "id": 1028,
+        "title": "寒冰精通",
+        "desc": "冰系魔杖: 冷却减半, 体积+50%",
+        "image": "upgrade_3001",
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "3005",
+            "mode": "add",
+            "effects": { "cooldown": 0.5, "data.scale": 1.5 }
+        }
+    },
+    {
+        "id": 1029,
+        "title": "雷霆精通",
+        "desc": "雷系魔杖: 伤害变为原来的三倍",
+        "image": "upgrade_3001",
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "3004",
+            "mode": "mult",
+            "effects": { "damage": 3 }
+        }
+    },
+    {
+        "id": 1030,
+        "title": "自然之力",
+        "desc": "木系魔杖: 伤害+50%，体积变为原来的三倍",
+        "image": "upgrade_3001",
+        "tier": 2,
+        "type": "weapon_buff",
+        "data": {
+            "target": "3003",
+            "mode": "mult",
+            "effects": { "damage": 1.5, "data.scale": 3 }
+        }
+    },
+    {
+        "id": 1031,
+        "title": "御剑术",
+        "desc": "所有飞剑: 旋转半径+30, 体积翻倍",
+        "image": "wind_sword",
+        "tier": 3,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "add",
+            "effects": { "data.radius": 30, "data.scale": 1 }
+        }
+    },
+    {
+        "id": 1032,
+        "title": "领域展开",
+        "desc": "所有光环: 范围+50%, 伤害+5",
+        "image": "blue_orb",
+        "tier": 3,
+        "type": "weapon_buff",
+        "data": {
+            "target": "all",
+            "mode": "add",
+            "effects": { "data.radius": 20, "damage": 5, "data.scale": 0.5 }
+        }
+    }
+]
