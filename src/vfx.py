@@ -105,24 +105,6 @@ class AnimationPlayer:
         """获取所有原始帧 (用于像子弹那样需要预先旋转的情况)"""
         return self.frames
 
-class VFXManager:
-    def __init__(self, all_sprites_group):
-        self.groups = all_sprites_group
-        # 预加载特效的序列帧 (从 ResourceManager 获取)
-
-    def trigger(self, vfx_id, pos, target_sprite=None):
-        """
-        统一入口。
-        :param vfx_id: 特效编号 (int)
-        :param pos: 发生位置
-        :param target_sprite: 如果是受击闪烁，需要传入目标对象
-        """
-        if vfx_id == settings.VFX_HIT_FLASH:
-            self._create_flash(target_sprite)
-        elif vfx_id == settings.VFX_DEATH_POOF:
-            self._create_explosion(pos)
-        # ...
-
 class FlashEffect(pygame.sprite.Sprite):
     """受击闪白/闪红特效"""
     def __init__(self, target_sprite, groups, duration=0.1):

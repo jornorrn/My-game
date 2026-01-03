@@ -185,6 +185,7 @@ class UpgradeManager:
         """
         valid_options = [opt for opt in self.db if opt.tier <= level]
         
+        # 如果过滤太狠没选项了，就放宽限制
         if not valid_options:
             return []
             
