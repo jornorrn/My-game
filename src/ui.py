@@ -205,6 +205,9 @@ class UI:
             self.info_font = pygame.font.Font('assets/fonts/pixel.ttf', 30)
             self.card_title_font = pygame.font.Font('assets/fonts/pixel.ttf', 32)
             self.card_desc_font = pygame.font.Font('assets/fonts/pixel.ttf', 20)
+            # 等级显示字体（更大、加粗）
+            self.level_font = pygame.font.Font('assets/fonts/pixel.ttf', 36)
+            self.level_font.set_bold(True)
             # 主菜单字体
             self.menu_title_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 120)
             self.menu_button_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 48)
@@ -214,6 +217,9 @@ class UI:
             self.info_font = pygame.font.Font(None, 30)
             self.card_title_font = pygame.font.Font(None, 40)
             self.card_desc_font = pygame.font.Font(None, 24)
+            # 等级显示字体 fallback
+            self.level_font = pygame.font.Font(None, 36)
+            self.level_font.set_bold(True)
             # 主菜单字体 fallback
             self.menu_title_font = pygame.font.Font(None, 120)
             self.menu_button_font = pygame.font.Font(None, 48)
@@ -237,9 +243,9 @@ class UI:
         self.fill_offset_y = 12
 
         # 创建半透明遮罩 (黑色，透明度 150/255)
-        self.mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.mask.fill((0, 0, 0))
-        self.mask.set_alpha(150)
+        # 使用 SRCALPHA 模式支持透明度，确保底层游戏内容可见
+        self.mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self.mask.fill((0, 0, 0, 150))  # 黑色半透明遮罩，透明度150/255
 
         # 加载 Banner
         self.banner_w = WINDOW_WIDTH // 3
@@ -258,10 +264,10 @@ class UI:
         # 加载新手引导图片
         self.guide_image = self.res.get_image('guide')
         
-        # 创建灰色半透明遮罩（用于教程，能看到游戏画面）
-        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.tutorial_mask.fill((100, 100, 100))  # 灰色
-        self.tutorial_mask.set_alpha(180)  # 透明度
+        # 创建半透明遮罩（用于教程，能看到游戏画面）
+        # 使用更暗的颜色，这样即使底层是黑色背景，也不会太明显
+        self.tutorial_mask = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        self.tutorial_mask.fill((0, 0, 0, 180))  # 黑色半透明遮罩，透明度180/255
         
         # 加载主菜单背景图片
         self.menu_bg = self.res.get_image('cover')
@@ -415,6 +421,17 @@ class UI:
     def draw_hud(self, player):
         '''绘制战斗HUD'''
         self.draw_bar(20, 20, player.current_hp, player.stats['max_hp'], target_width=300)
+        
+        # 在血条右侧显示等级
+        level_text = f"LV.{player.level}"
+        level_surf = self.level_font.render(level_text, False, (255, 255, 255))  # 白色字体，加粗
+        # 血条右端位置：x=20, width=300，所以右端在320，加上间距30
+        level_x = 20 + 300 + 30
+        # 垂直居中，与血条对齐
+        level_y = 20 + self.frame_height // 2
+        level_rect = level_surf.get_rect(midleft=(level_x, level_y))
+        self.display_surface.blit(level_surf, level_rect)
+        
         mouse_pos = pygame.mouse.get_pos()
         for btn in self.hud_buttons:
             btn.update(mouse_pos)
@@ -596,7 +613,8 @@ class UI:
     # ====================================================
     def draw_tutorial(self):
         """绘制新手引导教程"""
-        # 1. 绘制灰色半透明遮罩（能看到游戏画面）
+        # 1. 绘制半透明遮罩（能看到游戏画面）
+        # 使用 SRCALPHA 模式的 Surface 可以直接支持透明度
         self.display_surface.blit(self.tutorial_mask, (0, 0))
         
         # 2. 居中显示 guide.png

@@ -78,6 +78,12 @@ class MapManager:
         # --- 1. 素材准备与切割 ---
         img_floor = res.get_image('tile_grass')
         img_wall = res.get_image('tile_wall')
+        
+        # 调试：检查地板图片是否正确加载
+        if img_floor is None:
+            print("[ERROR] tile_grass image not loaded!")
+        else:
+            print(f"[DEBUG] tile_grass loaded: {img_floor.get_size()}")
             
         # 装饰列表 (扫描所有 deco_ 开头的)
         deco_images = []
@@ -103,11 +109,16 @@ class MapManager:
         
         # --- 实例化 ---
         
-        # 铺地板
-        for x in range(self.width - 1):
-            for y in range(self.height - 1):
+        # 铺地板 - 修复：铺满整个地图（包括边缘）
+        # 原代码使用 width-1 和 height-1，导致缺少最后一列和最后一行地板
+        # 修复为 width 和 height，确保铺满整个地图
+        floor_count = 0
+        for x in range(self.width):
+            for y in range(self.height):
                 pos = (x * TILE_SIZE, y * TILE_SIZE)
                 Tile(pos, [self.game.all_sprites], 'floor', surface=img_floor)
+                floor_count += 1
+        print(f"[DEBUG] Created {floor_count} floor tiles")
         
         # 生成物件
         for coords, type_name in self.grid.items():
@@ -123,8 +134,12 @@ class MapManager:
             elif type_name == 'deco':
                 # 随机选一个装饰
                 img = random.choice(deco_images)
-                # 如果原图 64x64 太大，可以在这里写死一个固定缩放，比如 0.8
-                # Tile(pos, [self.game.all_sprites], 'deco', surface=img)
+                # 将装饰物缩放到 64x64
+                img_scaled = pygame.transform.smoothscale(img, (64, 64))
+                # 调整位置使装饰物居中在网格上（装饰物64x64，网格32x32，需要向左上偏移16像素）
+                deco_pos = (pos[0] - 16, pos[1] - 16)
+                # 创建装饰物 Tile，放在 ground 层
+                Tile(deco_pos, [self.game.all_sprites], 'deco', surface=img_scaled)
             
             elif type_name == 'tree':
                 # 随机选一种树

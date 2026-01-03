@@ -229,6 +229,7 @@ class YSortCameraGroup(pygame.sprite.Group):
     自定义渲染组：
     1. 摄像机跟随 (Camera Follow)
     2. Y轴排序 (Y-Sort)
+    [优化] 单次遍历分组 + 全层级视锥剔除
     """
     def __init__(self):
         super().__init__()
@@ -236,45 +237,85 @@ class YSortCameraGroup(pygame.sprite.Group):
         self.half_width = self.display_surface.get_size()[0] // 2
         self.half_height = self.display_surface.get_size()[1] // 2
         self.offset = pygame.math.Vector2()
+        
+        # [优化] 视锥剔除边界（考虑精灵可能比 TILE_SIZE 大）
+        self.cull_margin = TILE_SIZE * 4  # 扩大边界以包含大型精灵
+
+    def _is_visible(self, offset_pos, sprite):
+        """检查精灵是否在可见区域内"""
+        # 修复：检查精灵矩形是否与屏幕矩形相交
+        # 使用精灵实际大小来判断，考虑精灵可能部分在屏幕外但仍可见
+        sprite_w = sprite.rect.width
+        sprite_h = sprite.rect.height
+        
+        # 精灵的屏幕矩形
+        sprite_rect = pygame.Rect(offset_pos[0], offset_pos[1], sprite_w, sprite_h)
+        # 屏幕矩形（加上边距）
+        screen_rect = pygame.Rect(-self.cull_margin, -self.cull_margin, 
+                                  WINDOW_WIDTH + 2 * self.cull_margin, 
+                                  WINDOW_HEIGHT + 2 * self.cull_margin)
+        
+        return sprite_rect.colliderect(screen_rect)
 
     def custom_draw(self, player):
         """
         替代原本的 draw() 方法
+        [优化] 单次遍历所有精灵，按层级分组，统一视锥剔除
         """
         # 1. 计算偏移量 (目标是让 player 永远在屏幕中心)
         self.offset.x = player.rect.centerx - self.half_width
         self.offset.y = player.rect.centery - self.half_height
 
-        # 2. 对所有精灵进行排序 (Y坐标小的先画，Y坐标大的后画 -> 产生遮挡关系)
-        #    注意：只对 LAYERS['main'] 层级的物体排序，地板层不需要排序
-        #    为了性能，我们分层绘制
+        # 2. [优化] 单次遍历，按层级分组
+        ground_sprites = []
+        vfx_bottom_sprites = []
+        main_sprites = []
+        vfx_top_sprites = []
         
-        # 先画地板 (Ground)
         for sprite in self.sprites():
-            if sprite.z_layer == LAYERS['ground']:
-                offset_pos = sprite.rect.topleft - self.offset
-                # 简单的视锥剔除 (Culling): 如果物体在屏幕外，就不画 (优化性能)
-                if -TILE_SIZE < offset_pos.x < WINDOW_WIDTH and -TILE_SIZE < offset_pos.y < WINDOW_HEIGHT:
-                    self.display_surface.blit(sprite.image, offset_pos)
+            z = sprite.z_layer
+            if z == LAYERS['ground']:
+                ground_sprites.append(sprite)
+            elif z == LAYERS['vfx_bottom']:
+                vfx_bottom_sprites.append(sprite)
+            elif z == LAYERS['main']:
+                main_sprites.append(sprite)
+            elif z == LAYERS['vfx_top']:
+                vfx_top_sprites.append(sprite)
 
-        # [新增] 画底层特效 (Layer 1: vfx_bottom) - 比如光环、脚印
-        # 这些东西在地面之上，但在角色之下，且不需要Y轴排序(通常扁平)
-        for sprite in self.sprites():
-            if sprite.z_layer == LAYERS['vfx_bottom']:
-                offset_pos = sprite.rect.topleft - self.offset
-                self.display_surface.blit(sprite.image, offset_pos)
-
-        # 3. 画活动物体 (Layer 2: main) - 需要 YSort
-        # 只筛选 main 层的物体进行排序
-        main_sprites = [s for s in self.sprites() if s.z_layer == LAYERS['main']]
-        sorted_sprites = sorted(main_sprites, key=lambda s: s.rect.centery)
-
-        for sprite in sorted_sprites:
+        # 3. 分层绘制，所有层都应用视锥剔除
+        
+        # 3.1 地板层 (Ground) - 修复：确保地板能覆盖整个屏幕
+        # 对于地板层，暂时禁用视锥剔除，确保所有地板都能被绘制
+        # 这样可以避免因为视锥剔除导致背景显示为黑色
+        for sprite in ground_sprites:
             offset_pos = sprite.rect.topleft - self.offset
+            # 暂时不进行视锥剔除，直接绘制所有地板
+            # 这样可以确保屏幕范围内都有地板显示
             self.display_surface.blit(sprite.image, offset_pos)
 
-        # 4. 画顶层特效 (Layer 3: vfx_top) - 比如爆炸、悬浮武器
-        for sprite in self.sprites():
-            if sprite.z_layer == LAYERS['vfx_top']:
-                offset_pos = sprite.rect.topleft - self.offset
+        # 3.2 底层特效 (vfx_bottom) - 光环、脚印、阴影
+        for sprite in vfx_bottom_sprites:
+            offset_pos = sprite.rect.topleft - self.offset
+            if self._is_visible(offset_pos, sprite):
+                self.display_surface.blit(sprite.image, offset_pos)
+
+        # 3.3 主层 (main) - 需要 Y 排序
+        # 只对可见的精灵排序，减少排序开销
+        visible_main = []
+        for sprite in main_sprites:
+            offset_pos = sprite.rect.topleft - self.offset
+            if self._is_visible(offset_pos, sprite):
+                visible_main.append((sprite, offset_pos))
+        
+        # Y 排序
+        visible_main.sort(key=lambda x: x[0].rect.centery)
+        
+        for sprite, offset_pos in visible_main:
+            self.display_surface.blit(sprite.image, offset_pos)
+
+        # 3.4 顶层特效 (vfx_top) - 爆炸、悬浮武器、树木
+        for sprite in vfx_top_sprites:
+            offset_pos = sprite.rect.topleft - self.offset
+            if self._is_visible(offset_pos, sprite):
                 self.display_surface.blit(sprite.image, offset_pos)

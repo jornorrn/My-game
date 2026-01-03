@@ -7,29 +7,6 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
     :param spacing: 帧之间的空隙像素
     :param margin: 第一帧左侧的空隙像素
     """
-    # #region agent log
-    import json
-    log_data = {
-        "sessionId": "debug-session",
-        "runId": "run1",
-        "hypothesisId": "A",
-        "location": "vfx.py:slice_frames",
-        "message": "Frame slicing start",
-        "data": {
-            "frame_count": frame_count,
-            "frame_w": frame_w,
-            "spacing": spacing,
-            "margin": margin,
-            "sheet_size": sheet.get_size() if sheet else None
-        },
-        "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-    }
-    try:
-        with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-    except: pass
-    # #endregion
-    
     frames = []
     sheet_w, sheet_h = sheet.get_size()
     
@@ -48,64 +25,17 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
         # [关键修复] 安全检查：如果切片右边缘超出了图片总宽，停止切割
         # 这能防止 ValueError: subsurface rectangle outside surface area
         if x + frame_w > sheet_w:
-            print(f"[VFX WARNING] Frame {i} out of bounds. Image W:{sheet_w}, Target X:{x+frame_w}")
-            # #region agent log
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "A",
-                "location": "vfx.py:slice_frames",
-                "message": "Frame out of bounds",
-                "data": {"frame_index": i, "sheet_w": sheet_w, "target_x": x + frame_w},
-                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-            }
-            try:
-                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-            except: pass
-            # #endregion
             break
             
         rect = pygame.Rect(x, 0, frame_w, sheet_h)
         try:
             frames.append(sheet.subsurface(rect))
-        except ValueError as e:
-            # #region agent log
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "A",
-                "location": "vfx.py:slice_frames",
-                "message": "Subsurface ValueError",
-                "data": {"frame_index": i, "error": str(e)},
-                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-            }
-            try:
-                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-            except: pass
-            # #endregion
+        except ValueError:
             break
             
     # 如果切割失败（比如图片太小切不出来），至少返回原图防止崩溃
     if not frames:
         frames.append(sheet)
-    
-    # #region agent log
-    log_data = {
-        "sessionId": "debug-session",
-        "runId": "run1",
-        "hypothesisId": "A",
-        "location": "vfx.py:slice_frames",
-        "message": "Frame slicing complete",
-        "data": {"expected_frames": frame_count, "actual_frames": len(frames)},
-        "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-    }
-    try:
-        with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-    except: pass
-    # #endregion
         
     return frames
 
@@ -135,6 +65,10 @@ class AnimationPlayer:
         self.frame_index = 0
         self.animation_speed = default_speed
         self.finished = False # 是否播放完毕 (用于非循环动画)
+        
+        # [优化] 缩放缓存：缓存不同 scale 值对应的缩放结果
+        # 格式: {(frame_index, scale): scaled_surface}
+        self.scale_cache = {}
 
     def update(self, dt, loop=True):
         """
@@ -158,33 +92,6 @@ class AnimationPlayer:
                     self.frame_index = len(self.frames) - 1
                     self.finished = True
             
-            new_index = int(self.frame_index)
-            # #region agent log
-            import json
-            if old_index != new_index or self.frame_index >= len(self.frames):
-                log_data = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "C",
-                    "location": "vfx.py:update",
-                    "message": "Frame index changed",
-                    "data": {
-                        "old_index": old_index,
-                        "new_index": new_index,
-                        "frame_index_float": self.frame_index,
-                        "total_frames": len(self.frames),
-                        "animation_speed": self.animation_speed,
-                        "dt": dt,
-                        "loop": loop
-                    },
-                    "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-                }
-                try:
-                    with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                        f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-                except: pass
-            # #endregion
-        
         frame_idx = int(self.frame_index)
         if frame_idx >= len(self.frames):
             frame_idx = len(self.frames) - 1
@@ -195,57 +102,34 @@ class AnimationPlayer:
     # 获取当前帧+缩放函数
     def get_frame_image(self, dt, loop=True, scale=1.0):
         raw_img = self.update(dt, loop)
-        # #region agent log
-        import json
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "run1",
-            "hypothesisId": "C",
-            "location": "vfx.py:get_frame_image",
-            "message": "Getting frame image",
-            "data": {
-                "dt": dt,
-                "loop": loop,
-                "scale": scale,
-                "frame_index": int(self.frame_index) if hasattr(self, 'frame_index') else -1,
-                "total_frames": len(self.frames) if hasattr(self, 'frames') else 0,
-                "raw_img_is_none": raw_img is None,
-                "raw_img_size": raw_img.get_size() if raw_img else None
-            },
-            "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-        }
-        try:
-            with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-        except: pass
-        # #endregion
         if not raw_img: return None
         
-        if scale != 1.0:
-            w = int(raw_img.get_width() * scale)
-            h = int(raw_img.get_height() * scale)
-            scaled_img = pygame.transform.scale(raw_img, (w, h))
-            # #region agent log
-            log_data = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "E",
-                "location": "vfx.py:get_frame_image",
-                "message": "Scaled image",
-                "data": {
-                    "original_size": raw_img.get_size(),
-                    "scaled_size": scaled_img.get_size(),
-                    "scale": scale
-                },
-                "timestamp": pygame.time.get_ticks() if hasattr(pygame, 'time') else 0
-            }
-            try:
-                with open('/Users/aogo/My-game/.cursor/debug.log', 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(log_data, ensure_ascii=False) + '\n')
-            except: pass
-            # #endregion
-            return scaled_img
-        return raw_img
+        # [优化] 如果不需要缩放，直接返回原图
+        if scale == 1.0:
+            return raw_img
+        
+        # [优化] 使用缓存避免重复缩放
+        frame_idx = int(self.frame_index)
+        cache_key = (frame_idx, scale)
+        
+        if cache_key in self.scale_cache:
+            return self.scale_cache[cache_key]
+        
+        # 缓存未命中，执行缩放并缓存
+        w = int(raw_img.get_width() * scale)
+        h = int(raw_img.get_height() * scale)
+        scaled_img = pygame.transform.scale(raw_img, (w, h))
+        
+        # [优化] 限制缓存大小，避免内存占用过大
+        # 只保留最近使用的 50 个缓存项
+        if len(self.scale_cache) > 50:
+            # 删除最旧的缓存项（简单策略：清空一半）
+            keys_to_remove = list(self.scale_cache.keys())[:25]
+            for key in keys_to_remove:
+                del self.scale_cache[key]
+        
+        self.scale_cache[cache_key] = scaled_img
+        return scaled_img
         
     def get_all_frames(self):
         """获取所有原始帧 (用于像子弹那样需要预先旋转的情况)"""
@@ -290,9 +174,18 @@ class FlashEffect(pygame.sprite.Sprite):
 
 class Explosion(pygame.sprite.Sprite):
     """死亡/爆炸特效"""
-    def __init__(self, pos, groups, texture, frame_count=12, scale=2.0):
+    # 类变量：跟踪当前存在的特效数量
+    _active_count = 0
+    
+    def __init__(self, pos, groups, texture, frame_count=12, scale=1.0):
         super().__init__(groups)
         self.z_layer = LAYERS['vfx_top']
+        
+        # [优化] 检查特效数量限制
+        if Explosion._active_count >= MAX_VFX_COUNT:
+            # 如果特效过多，直接销毁，不创建新特效
+            self.kill()
+            return
         
         # [优化] 明确设置每帧大小为 64x64，确保正确裁切
         # 期望每帧大小为 64x64
@@ -336,6 +229,9 @@ class Explosion(pygame.sprite.Sprite):
         self.image = self.anim_player.get_frame_image(0, loop=False, scale=self.scale)
         self.rect = self.image.get_rect(center=pos)
         self.hitbox = self.rect.copy()
+        
+        # [优化] 增加活跃特效计数
+        Explosion._active_count += 1
 
     def update(self, dt):
         # get_frame_image 内部处理了帧更新
@@ -343,6 +239,8 @@ class Explosion(pygame.sprite.Sprite):
         img = self.anim_player.get_frame_image(dt, loop=False, scale=self.scale)
         
         if self.anim_player.finished:
+            # [优化] 减少活跃特效计数
+            Explosion._active_count = max(0, Explosion._active_count - 1)
             self.kill()
         elif img:
             self.image = img

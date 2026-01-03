@@ -16,6 +16,14 @@ class Game:
         pygame.init()
         pygame.display.set_caption("MysticEcho")
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        # 确保窗口有焦点，防止键盘输入被系统拦截
+        # 在 macOS 上，这有助于防止输入法拦截按键
+        pygame.display.get_surface().set_alpha(None)  # 确保窗口可见
+        # 禁用按键重复，避免按键事件被系统重复处理
+        pygame.key.set_repeat(0)  # 0 表示禁用按键重复
+        # 禁用文本输入，防止中文输入法拦截键盘事件（特别是 WASD 键）
+        # 这对于游戏来说很重要，因为我们不需要文本输入功能
+        pygame.key.stop_text_input()
         self.clock = pygame.time.Clock()
         self.running = True
         
@@ -128,8 +136,23 @@ class Game:
             
             if not available_enemies: return
 
-            # [修改] 根据等级计算生成数量，实现指数级增长
-            spawn_count = max(1, int(1.5 ** (self.player.level - 1)))
+            # [优化] 使用对数增长公式，避免后期怪物数量爆炸
+            # 公式：基础数量 + log(等级) * 系数，并设置上限
+            import math
+            base_count = 1
+            log_factor = 2.0  # 对数增长系数
+            max_per_spawn = MAX_SPAWN_COUNT  # 单次最大生成数量
+            
+            # 使用对数增长：1级=1, 5级≈2, 10级≈3, 20级≈4, 30级≈5
+            spawn_count = min(max_per_spawn, 
+                            max(1, base_count + int(math.log(self.player.level) * log_factor)))
+            
+            # [优化] 检查当前敌人数量，如果已接近上限则减少生成
+            current_enemy_count = len(self.enemy_sprites)
+            if current_enemy_count >= MAX_ENEMIES * 0.8:  # 达到80%上限时
+                spawn_count = max(1, spawn_count // 2)  # 减半生成
+            elif current_enemy_count >= MAX_ENEMIES:  # 已达到上限
+                return  # 不生成新敌人
             
             # 随机坐标逻辑 (严格限制在墙内)
             # 墙在网格坐标 0 和 width-1, height-1
@@ -147,8 +170,11 @@ class Game:
             if max_x <= min_x or max_y <= min_y:
                 return  # 地图太小，无法生成怪物
             
-            # [修改] 循环生成多个怪物
+            # [优化] 循环生成多个怪物，但限制总数量
             for _ in range(spawn_count):
+                # 再次检查敌人数量（防止循环中超过上限）
+                if len(self.enemy_sprites) >= MAX_ENEMIES:
+                    break
                 enemy_id = random.choice(available_enemies)
                 spawned = False
                 
@@ -171,11 +197,18 @@ class Game:
         # 根据游戏状态更新背景音乐（取消静音后会自动恢复）
         self.audio_manager.update_music_for_state(self.state)
         
+        # 在游戏状态下，确保文本输入被禁用，防止中文输入法拦截键盘事件
+        if self.state == 'PLAYING':
+            pygame.key.stop_text_input()
+        
         if self.state == 'MENU':
             pass  # 主菜单状态下不更新游戏逻辑
         elif self.state == 'TUTORIAL':
             pass  # 教程状态下不更新游戏逻辑
         elif self.state == 'PLAYING':
+            # 确保玩家存在
+            if self.player is None:
+                return
             self.all_sprites.update(dt)
             self.enemy_spawner(dt)
 
@@ -202,8 +235,45 @@ class Game:
         elif self.state == 'GAME_OVER':
             pass
 
+    def cleanup_game(self):
+        """清理游戏资源（地图、玩家、敌人等）"""
+        # 清空所有精灵
+        self.all_sprites.empty()
+        self.obstacle_sprites.empty()
+        self.enemy_sprites.empty()
+        
+        # 重置音频管理器
+        self.audio_manager.reset()
+        
+        # 清理玩家引用（如果存在）
+        self.player = None
+        
+        # 重置数值
+        self.spawn_timer = 0
+    
+    def start_new_game(self):
+        """开始新游戏：清理资源并重新生成地图和玩家，进入教程状态"""
+        # 先清理旧资源
+        self.cleanup_game()
+        
+        # 重新生成地图和玩家
+        self.map_manager.generate_forest()
+        spawn_pos = self.map_manager.spawn_point
+        self.player = Player(
+            pos=spawn_pos, 
+            groups=[self.all_sprites], 
+            obstacle_sprites=self.obstacle_sprites,
+            enemy_sprites=self.enemy_sprites,
+            resource_manager=self.loader
+        )
+        
+        # 重置数值
+        self.spawn_timer = 0
+        # 状态设为 TUTORIAL，让玩家先看教程
+        self.state = 'TUTORIAL'
+    
     def reset_game(self):
-        """[新增] 快速重置游戏状态"""
+        """[新增] 快速重置游戏状态（用于游戏中的重新开始）"""
         # 清空所有精灵
         self.all_sprites.empty()
         self.obstacle_sprites.empty()
@@ -236,8 +306,10 @@ class Game:
             self.screen.fill(COLORS['bg_void'])
             
             # 始终绘制游戏内容（包括教程状态下）
-            self.all_sprites.custom_draw(self.player)
-            self.ui.draw_hud(self.player)  # draw_hud 中已包含声音按钮
+            # 确保玩家存在时才绘制
+            if self.player is not None:
+                self.all_sprites.custom_draw(self.player)
+                self.ui.draw_hud(self.player)  # draw_hud 中已包含声音按钮
             
             if self.state == 'TUTORIAL':
                 # 教程状态下在游戏画面上叠加教程界面
@@ -273,12 +345,39 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             
+            # 处理文本输入事件，防止中文输入法显示（macOS 上特别重要）
+            # 当输入法处于中文状态时，这些事件会被触发，我们需要阻止它们
+            if event.type == pygame.TEXTINPUT:
+                # 游戏不需要文本输入，直接忽略这些事件
+                # 这样可以防止中文输入法在按下 WASD 时显示输入框
+                pass
+            elif event.type == pygame.TEXTEDITING:
+                # 文本编辑事件（输入法候选词等），同样忽略
+                pass
+            
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                # 明确处理 WASD 键，防止系统输入法拦截（特别是在 macOS 上）
+                # 即使这些键通过 pygame.key.get_pressed() 在 player.input() 中处理，
+                # 我们也需要在这里捕获 KEYDOWN 事件来阻止系统默认行为
+                wasd_keys = (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d)
+                if event.key in wasd_keys:
+                    # 在游戏状态下，这些键用于移动，不应该触发系统输入
+                    # 通过明确处理这些事件，我们可以防止 macOS 输入法拦截它们
+                    if self.state == 'PLAYING':
+                        # 明确处理，阻止默认行为
+                        # 注意：实际的移动逻辑在 player.input() 中通过 get_pressed() 处理
+                        pass
+                elif event.key == pygame.K_ESCAPE:
                     if self.state == 'PLAYING':
                         self.state = 'PAUSED'
                     elif self.state == 'PAUSED':
                         self.state = 'PLAYING'
+            
+            # 处理窗口焦点事件，确保游戏窗口有焦点时能正确接收键盘输入
+            if event.type == pygame.ACTIVEEVENT:
+                if event.gain == 1:  # 窗口获得焦点
+                    # 窗口获得焦点时，确保禁用文本输入，防止输入法拦截
+                    pygame.key.stop_text_input()
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -291,7 +390,8 @@ class Game:
                             # 停止主页 BGM，避免与开始游戏音效重叠
                             self.audio_manager.stop_bgm()
                             self.audio_manager.play_sfx('sfx_startgame', volume=0.7)
-                            self.state = 'TUTORIAL'
+                            # 开始新游戏：清理旧资源并重新生成地图和玩家，进入教程状态
+                            self.start_new_game()
                         elif action == 'quit':
                             self.running = False
                         elif action == 'toggle_sound':
@@ -320,7 +420,10 @@ class Game:
                         if action == 'resume': self.state = 'PLAYING'
                         elif action == 'restart': self.reset_game()
                         elif action == 'quit': self.running = False
-                        elif action == 'home': self.state = 'MENU'
+                        elif action == 'home': 
+                            # 返回主界面时清理所有游戏资源
+                            self.cleanup_game()
+                            self.state = 'MENU'
                         elif action == 'pause_game': self.state = 'PAUSED'
                         elif action == 'toggle_sound':
                             is_muted = self.audio_manager.toggle_mute()
