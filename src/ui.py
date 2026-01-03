@@ -292,8 +292,8 @@ class UI:
         self.death_buttons = [
             # Restart (Blue) - 居左
             Button((cx - 50, btn_y), btn_blue, btn_blue_p, icon_restart, 'restart'),
-            # Quit (Red) - 居右
-            Button((cx + 50, btn_y), btn_red, btn_red_p, icon_quit, 'quit')
+            # Home (Red) - 居右
+            Button((cx + 50, btn_y), btn_red, btn_red_p, icon_home, 'home')
         ]
         # --- 右上角 HUD 暂停按钮 ---
         self.hud_buttons = [
@@ -358,7 +358,9 @@ class UI:
             self.display_surface.blit(fill_surf, (x + self.w_L, y + self.fill_offset_y))
             
         # --- 3. 绘制文字 ---
-        txt = f"{int(current)}/{max_val}"
+        # 确保显示的生命值不会为负数
+        display_current = max(0, int(current))
+        txt = f"{display_current}/{max_val}"
         txt_surf = self.font.render(txt, False, (255, 255, 255))
         # 稍微向下微调一点视觉中心
         txt_rect = txt_surf.get_rect(center=(x + target_width // 2, y + self.frame_height // 2 - 2))

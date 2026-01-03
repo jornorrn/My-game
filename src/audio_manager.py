@@ -8,11 +8,12 @@ class AudioManager:
         self.current_bgm = None
         self.failed_played = False  # 标记是否已播放死亡音效
         
-    def play_bgm(self, bgm_key, loops=-1):
+    def play_bgm(self, bgm_key, loops=-1, volume=0.6):
         """
         播放背景音乐
         :param bgm_key: 音频文件名（不含后缀，如 'bgm_home'）
         :param loops: 循环次数，-1 表示无限循环
+        :param volume: 音量 (0.0 到 1.0)，默认 0.6 (60%)
         """
         bgm_path = self.res.get_sound(bgm_key)
         if bgm_path and bgm_path != self.current_bgm:
@@ -21,9 +22,10 @@ class AudioManager:
             # 加载新音乐
             try:
                 pygame.mixer.music.load(bgm_path)
+                pygame.mixer.music.set_volume(volume)
                 pygame.mixer.music.play(loops)
                 self.current_bgm = bgm_path
-                print(f"[AUDIO] Playing BGM: {bgm_key}")
+                print(f"[AUDIO] Playing BGM: {bgm_key} at volume {volume}")
             except Exception as e:
                 print(f"[ERROR] Failed to play BGM {bgm_key}: {e}")
     
@@ -32,18 +34,18 @@ class AudioManager:
         pygame.mixer.music.stop()
         self.current_bgm = None
     
-    def play_sfx(self, sfx_key, volume=0.5):
+    def play_sfx(self, sfx_key, volume=0.9):
         """
         播放音效
         :param sfx_key: 音频文件名（不含后缀，如 'sfx_failed'）
-        :param volume: 音量 (0.0 到 1.0)
+        :param volume: 音量 (0.0 到 1.0)，默认 0.9 (90%)
         """
         sound = self.res.get_sound(sfx_key)
         if sound:
             try:
                 sound.set_volume(volume)
                 sound.play()
-                print(f"[AUDIO] Playing SFX: {sfx_key}")
+                print(f"[AUDIO] Playing SFX: {sfx_key} at volume {volume}")
             except Exception as e:
                 print(f"[ERROR] Failed to play SFX {sfx_key}: {e}")
     
@@ -62,8 +64,11 @@ class AudioManager:
         
         if state == 'MENU':
             self.play_bgm('bgm_home', loops=-1)
-        elif state in ['TUTORIAL', 'PLAYING', 'PAUSED', 'LEVEL_UP']:
-            # 游戏过程（包括游戏进行、暂停、新手指引状态）播放 bgm_main
+        elif state == 'TUTORIAL':
+            # 新手教程状态不播放背景音乐，保持静默
+            pass
+        elif state in ['PLAYING', 'PAUSED', 'LEVEL_UP']:
+            # 游戏过程（包括游戏进行、暂停、升级选择状态）播放 bgm_main
             self.play_bgm('bgm_main', loops=-1)
         elif state == 'GAME_OVER':
             # 死亡时播放一次 sfx_failed，然后保持静默

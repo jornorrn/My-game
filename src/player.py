@@ -77,7 +77,8 @@ class Player(Entity):
         self.current_hp = self.stats['max_hp']
         self.xp = 0
         self.level = 1
-        self.xp_required = 100
+        # 使用经验计算公式初始化经验要求
+        self.xp_required = self.calculate_xp_required(self.level)
         
         # 战斗状态
         self.is_dead = False
@@ -213,12 +214,34 @@ class Player(Entity):
         elif -135 <= angle < -45: self.status = 'down'
         else: self.status = 'left'
 
+    def calculate_xp_required(self, level):
+        """
+        根据等级计算所需经验值
+        使用指数增长曲线，使升级随等级提升变慢
+        公式：base * (multiplier ^ (level - 1))
+        """
+        base_xp = 100  # 基础经验值（1级）
+        multiplier = 1.5  # 增长倍数，使升级变慢
+        
+        # 使用指数增长，匹配游戏难度
+        # 等级越高，所需经验值增长越快
+        xp_needed = base_xp * (multiplier ** (level - 1))
+        
+        # 为了匹配难度，可以添加额外的难度系数
+        # 例如：高等级时额外增加经验要求
+        if level > 10:
+            difficulty_bonus = 1.0 + (level - 10) * 0.1  # 10级后每级额外增加10%
+            xp_needed *= difficulty_bonus
+        
+        return int(xp_needed)
+    
     def check_level_up(self):
         """检查是否升级"""
         if self.xp >= self.xp_required:
             self.xp -= self.xp_required
             self.level += 1
-            self.xp_required = int(self.xp_required * 1.2)
+            # 使用新的经验计算公式，使升级随等级提升变慢
+            self.xp_required = self.calculate_xp_required(self.level)
             return True
         return False
 
@@ -229,6 +252,9 @@ class Player(Entity):
             return
 
         self.current_hp -= amount
+        # 确保生命值不会低于0
+        if self.current_hp < 0:
+            self.current_hp = 0
         self.last_hit_time = current_time
         print(f"[DEBUG] Player hit! HP: {self.current_hp}")
         FlashEffect(self, [self.groups()[0]], duration=0.2)
