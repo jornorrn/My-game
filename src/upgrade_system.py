@@ -181,22 +181,10 @@ class UpgradeManager:
     def get_random_options(self, level, amount=3):
         """
         抽取不重复的卡片
-        逻辑：
-        1. Tier <= Level (基本条件)
-        2. Level - Tier < Threshold (不显示太低级的)
+        逻辑：Tier <= Level
         """
-        threshold = 5 # 等级与tier差距范围
+        valid_options = [opt for opt in self.db if opt.tier <= level]
         
-        valid_options = []
-        for opt in self.db:
-            if opt.tier <= level:
-                if (level - opt.tier) < threshold:
-                    valid_options.append(opt)
-        
-        # 如果过滤太狠没选项了，就放宽限制
-        if not valid_options:
-            valid_options = [opt for opt in self.db if opt.tier <= level]
-            
         if not valid_options:
             return []
             
