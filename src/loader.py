@@ -36,10 +36,10 @@ class ResourceManager:
 
     def _load_graphics_recursive(self, folder_path):
         """
-        递归扫描文件夹，支持 .png, .jpg, .jpeg
+        递归扫描文件夹，支持 .png, .jpg, .jpeg, .svg
         Key 为文件名（小写，不含后缀）
         """
-        supported_ext = ('.png', '.jpg', '.jpeg')
+        supported_ext = ('.png', '.jpg', '.jpeg', '.svg')
         
         for root, _, files in os.walk(folder_path):
             for file in files:
@@ -49,7 +49,11 @@ class ResourceManager:
                     full_path = os.path.join(root, file)
                     
                     try:
-                        surf = pygame.image.load(full_path).convert_alpha()
+                        # SVG 文件需要特殊处理
+                        if file.lower().endswith('.svg'):
+                            surf = self._load_svg(full_path)
+                        else:
+                            surf = pygame.image.load(full_path).convert_alpha()
                         
                         # 检查重名冲突 (Warn only)
                         if file_name_no_ext in self.images:
@@ -59,6 +63,34 @@ class ResourceManager:
                         
                     except Exception as e:
                         print(f"[ERROR] Failed to load image {full_path}: {e}")
+    
+    def _load_svg(self, svg_path):
+        """加载 SVG 文件，尝试使用 pygame 直接加载，失败则使用备用方法"""
+        try:
+            # pygame-ce 2.5+ 可能支持 SVG，先尝试直接加载
+            return pygame.image.load(svg_path).convert_alpha()
+        except Exception as load_error:
+            # 如果直接加载失败，尝试使用 cairosvg（如果可用）
+            try:
+                import cairosvg
+                import io
+                # 将 SVG 转换为 PNG 字节流
+                png_data = cairosvg.svg2png(url=svg_path)
+                # 从字节流创建 Surface
+                return pygame.image.load(io.BytesIO(png_data)).convert_alpha()
+            except ImportError:
+                # 如果 cairosvg 不可用，尝试直接加载（可能 pygame 支持但需要特定格式）
+                print(f"[WARNING] SVG loading failed. Try installing cairosvg: pip install cairosvg")
+                # 返回一个占位符
+                surf = pygame.Surface((200, 100))
+                surf.fill((255, 0, 255))
+                return surf
+            except Exception as e:
+                print(f"[ERROR] Failed to load SVG {svg_path}: {e}")
+                # 返回一个占位符
+                surf = pygame.Surface((200, 100))
+                surf.fill((255, 0, 255))
+                return surf
 
     def _load_json(self, filename, target_key, id_range):
         """通用 JSON 加载器"""

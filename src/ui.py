@@ -552,6 +552,32 @@ class UI:
             return not self.guide_rect.collidepoint(mouse_pos)
         return True
 
+    def _render_text_with_outline(self, font, text, text_color, outline_color, outline_width=2):
+        """渲染带描边的文字"""
+        # 先渲染描边（在多个方向偏移）
+        offsets = [(-outline_width, -outline_width), (outline_width, -outline_width),
+                   (-outline_width, outline_width), (outline_width, outline_width),
+                   (0, -outline_width), (0, outline_width),
+                   (-outline_width, 0), (outline_width, 0)]
+        
+        # 获取文字尺寸
+        text_surf = font.render(text, True, text_color)
+        w, h = text_surf.get_size()
+        
+        # 创建更大的 Surface 以容纳描边
+        outline_surf = pygame.Surface((w + outline_width * 2, h + outline_width * 2), pygame.SRCALPHA)
+        
+        # 绘制描边
+        for offset_x, offset_y in offsets:
+            outline_text = font.render(text, True, outline_color)
+            outline_surf.blit(outline_text, (outline_width + offset_x, outline_width + offset_y))
+        
+        # 绘制主文字（在描边之上）
+        text_surf = font.render(text, True, text_color)
+        outline_surf.blit(text_surf, (outline_width, outline_width))
+        
+        return outline_surf
+
     # ====================================================
     # 5. 主菜单 (状态: MENU)
     # ====================================================
@@ -560,32 +586,63 @@ class UI:
         # 1. 绘制背景图片
         self.display_surface.blit(self.menu_bg, (0, 0))
         
-        # 2. 绘制标题 "MysticEcho"
+        # 2. 绘制标题（使用 title.svg）
         cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
-        title_surf = self.menu_title_font.render("MysticEcho", False, (255, 255, 255))
-        title_rect = title_surf.get_rect(center=(cx, 150))
-        self.display_surface.blit(title_surf, title_rect)
+        title_image = self.res.get_image('title')
+        title_rect = title_image.get_rect(center=(cx, 150))
+        self.display_surface.blit(title_image, title_rect)
         
-        # 3. 绘制按钮文本
+        # 3. 加载选项背景
+        choice_bg = self.res.get_image('choice_bg')
+        
+        # 4. 计算选项位置
+        # 标题底部位置
+        title_bottom = title_rect.bottom
+        # 标题和选项之间间距为 36
+        first_option_top = title_bottom + 36
+        # 选项之间间距为 16
+        option_spacing = 16
+        
+        # 计算第一个选项的中心 Y 坐标（需要知道背景高度）
+        bg_height = choice_bg.get_height()
+        first_option_center_y = first_option_top + bg_height // 2
+        second_option_center_y = first_option_center_y + bg_height + option_spacing
+        
         mouse_pos = pygame.mouse.get_pos()
         
-        # "Started" 按钮
-        started_surf = self.menu_button_font.render("Started", False, (255, 255, 255))
-        started_rect = started_surf.get_rect(center=(cx, cy + 80))
-        # 悬停效果：改变颜色
-        if started_rect.collidepoint(mouse_pos):
-            started_surf = self.menu_button_font.render("Started", False, (255, 255, 0))
-        self.display_surface.blit(started_surf, started_rect)
-        self.menu_started_rect = started_rect
+        # 5. 绘制 "Started" 选项
+        started_bg_rect = choice_bg.get_rect(center=(cx, first_option_center_y))
+        self.display_surface.blit(choice_bg, started_bg_rect)
         
-        # "Quit" 按钮
-        quit_surf = self.menu_button_font.render("Quit", False, (255, 255, 255))
-        quit_rect = quit_surf.get_rect(center=(cx, cy + 150))
-        # 悬停效果：改变颜色
-        if quit_rect.collidepoint(mouse_pos):
-            quit_surf = self.menu_button_font.render("Quit", False, (255, 255, 0))
-        self.display_surface.blit(quit_surf, quit_rect)
-        self.menu_quit_rect = quit_rect
+        # 渲染带描边的文字
+        started_text_surf = self._render_text_with_outline(
+            self.menu_button_font, "Started", 
+            (0, 0, 0),  # 黑色文字
+            (255, 255, 255),  # 白色描边
+            outline_width=2
+        )
+        started_text_rect = started_text_surf.get_rect(center=started_bg_rect.center)
+        self.display_surface.blit(started_text_surf, started_text_rect)
+        
+        # 更新点击检测区域（使用背景区域）
+        self.menu_started_rect = started_bg_rect
+        
+        # 6. 绘制 "Quit" 选项
+        quit_bg_rect = choice_bg.get_rect(center=(cx, second_option_center_y))
+        self.display_surface.blit(choice_bg, quit_bg_rect)
+        
+        # 渲染带描边的文字
+        quit_text_surf = self._render_text_with_outline(
+            self.menu_button_font, "Quit",
+            (0, 0, 0),  # 黑色文字
+            (255, 255, 255),  # 白色描边
+            outline_width=2
+        )
+        quit_text_rect = quit_text_surf.get_rect(center=quit_bg_rect.center)
+        self.display_surface.blit(quit_text_surf, quit_text_rect)
+        
+        # 更新点击检测区域（使用背景区域）
+        self.menu_quit_rect = quit_bg_rect
 
     def get_main_menu_click(self, mouse_pos):
         """检测主菜单点击位置，返回 'start' 或 'quit' 或 None"""
