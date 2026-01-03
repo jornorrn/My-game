@@ -587,9 +587,11 @@ class UI:
         self.display_surface.blit(self.menu_bg, (0, 0))
         
         # 2. 绘制标题（使用 title.svg）
-        cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
+        # 距离顶部220px，距离右边距100px
         title_image = self.res.get_image('title')
-        title_rect = title_image.get_rect(center=(cx, 150))
+        title_rect = title_image.get_rect()
+        title_rect.top = 200  # 距离顶部220px
+        title_rect.right = WINDOW_WIDTH - 100  # 距离右边距100px
         self.display_surface.blit(title_image, title_rect)
         
         # 3. 加载选项背景
@@ -608,10 +610,13 @@ class UI:
         first_option_center_y = first_option_top + bg_height // 2
         second_option_center_y = first_option_center_y + bg_height + option_spacing
         
+        # 选项的X坐标：与标题右对齐（距离右边距100px）
+        option_x = WINDOW_WIDTH - 100 - choice_bg.get_width() // 2
+        
         mouse_pos = pygame.mouse.get_pos()
         
         # 5. 绘制 "Started" 选项
-        started_bg_rect = choice_bg.get_rect(center=(cx, first_option_center_y))
+        started_bg_rect = choice_bg.get_rect(center=(option_x, first_option_center_y))
         self.display_surface.blit(choice_bg, started_bg_rect)
         
         # 渲染带描边的文字
@@ -628,7 +633,7 @@ class UI:
         self.menu_started_rect = started_bg_rect
         
         # 6. 绘制 "Quit" 选项
-        quit_bg_rect = choice_bg.get_rect(center=(cx, second_option_center_y))
+        quit_bg_rect = choice_bg.get_rect(center=(option_x, second_option_center_y))
         self.display_surface.blit(choice_bg, quit_bg_rect)
         
         # 渲染带描边的文字
