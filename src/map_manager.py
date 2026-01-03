@@ -14,6 +14,14 @@ class MapManager:
         self.grid = {} 
         self.spawn_point = (0, 0)
 
+    def _has_obstacle_in_range(self, x, y, grid):
+        """检查目标位置周围2x2范围内是否有障碍物"""
+        for dx in range(-1, 2):  # -1, 0, 1
+            for dy in range(-1, 2):  # -1, 0, 1
+                if (x + dx, y + dy) in grid:
+                    return True
+        return False
+
     def generate_forest(self):
         """生成森林地图"""
         print("[Map] Generating Forest...")
@@ -33,12 +41,17 @@ class MapManager:
         # 3. 生成随机水域 （已删除，因效果不佳。）
             
         # 4. 撒树 (障碍物)
-        # 避开水和墙
-        for _ in range(100): # 尝试种200棵树
+        # 每个障碍物2x2范围内没有其他障碍物，使生成更均匀
+        trees_placed = 0
+        max_attempts = 1000  # 防止无限循环
+        attempts = 0
+        while trees_placed < 100 and attempts < max_attempts:
             x = random.randint(1, self.width - 2)
             y = random.randint(1, self.height - 2)
-            if (x, y) not in self.grid:
+            if (x, y) not in self.grid and not self._has_obstacle_in_range(x, y, self.grid):
                 self.grid[(x, y)] = 'tree'
+                trees_placed += 1
+            attempts += 1
                 
         # 5. 撒装饰物 (非障碍)
         for _ in range(100):

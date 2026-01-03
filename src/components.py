@@ -137,7 +137,10 @@ class Tile(GameSprite):
         
          # 2. 层级与碰撞箱处理
         if sprite_type == 'wall' or sprite_type == 'tree':
-            self.z_layer = LAYERS['main'] # 参与遮挡排序
+            if sprite_type == 'tree':
+                self.z_layer = LAYERS['vfx_top']  # 树放在顶层，实现完全遮挡
+            else:
+                self.z_layer = LAYERS['main']  # 墙保持在main层
             
             # [核心逻辑] 处理“高物体”
             # 如果图片高度大于 TILE_SIZE (比如 124px 的墙)，
@@ -193,7 +196,7 @@ class AnimatedTile(Tile):
         self.rect = self.image.get_rect()
         
         if sprite_type == 'tree':
-            self.z_layer = LAYERS['main']
+            self.z_layer = LAYERS['vfx_top']  # 树放在顶层，实现完全遮挡
             # [核心对齐]：图片的底边中心 = 判定箱的底边中心 + 偏移量
             # 只要你裁剪了图片底部的透明像素，这行代码能保证树根就在判定箱里
             target_x = self.hitbox.centerx + offset[0]

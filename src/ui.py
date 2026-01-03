@@ -257,6 +257,7 @@ class UI:
         icon_resume = get_icon('icon_resume')
         icon_restart = get_icon('icon_restart')
         icon_quit = get_icon('icon_quit')
+        icon_home = get_icon('icon_home')
         icon_pause = get_icon('icon_pause')
         
         # 按钮背景
@@ -278,8 +279,8 @@ class UI:
             Button((cx, btn_y), btn_yellow, btn_yellow_p, icon_resume, 'resume'),
             # Restart (Blue)
             Button((cx - spacing, btn_y), btn_blue, btn_blue_p, icon_restart, 'restart'),
-            # Quit (Red)
-            Button((cx + spacing, btn_y), btn_red, btn_red_p, icon_quit, 'quit')
+            # Home (Red)
+            Button((cx + spacing, btn_y), btn_red, btn_red_p, icon_home, 'home')
         ]
         # --- 死亡菜单按钮组 ---
         self.death_buttons = [

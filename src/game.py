@@ -65,7 +65,8 @@ class Game:
             
             if not available_enemies: return
 
-            enemy_id = random.choice(available_enemies)
+            # [修改] 根据等级计算生成数量，实现指数级增长
+            spawn_count = max(1, int(1.5 ** (self.player.level - 1)))
             
             # 随机坐标逻辑 (简单防卡死版)
             # [修改] 限制生成范围在墙壁内侧
@@ -78,16 +79,26 @@ class Game:
             min_y = 2 * TILE_SIZE
             max_y = (self.map_manager.height - 2) * TILE_SIZE
             
-            for _ in range(10): 
-                x = random.randint(min_x, max_x)
-                y = random.randint(min_y, max_y)
-                spawn_pos = pygame.math.Vector2(x, y)
+            # [修改] 循环生成多个怪物
+            for _ in range(spawn_count):
+                enemy_id = random.choice(available_enemies)
+                spawned = False
                 
-                # 距离检查
-                if spawn_pos.distance_to(self.player.rect.center) > 400:
-                    Enemy((x, y), enemy_id, [self.all_sprites, self.enemy_sprites], 
-                          self.obstacle_sprites, self.player, self.loader)
-                    break
+                for attempt in range(10): 
+                    x = random.randint(min_x, max_x)
+                    y = random.randint(min_y, max_y)
+                    spawn_pos = pygame.math.Vector2(x, y)
+                    
+                    # 距离检查
+                    if spawn_pos.distance_to(self.player.rect.center) > 400:
+                        Enemy((x, y), enemy_id, [self.all_sprites, self.enemy_sprites], 
+                              self.obstacle_sprites, self.player, self.loader)
+                        spawned = True
+                        break
+                
+                # 如果10次尝试都失败，跳过这个怪物（避免卡死）
+                if not spawned:
+                    continue
 
     def update(self, dt):
         if self.state == 'MENU':
@@ -201,6 +212,7 @@ class Game:
                         if action == 'resume': self.state = 'PLAYING'
                         elif action == 'restart': self.reset_game()
                         elif action == 'quit': self.running = False
+                        elif action == 'home': self.state = 'MENU'
                         elif action == 'pause_game': self.state = 'PAUSED'
 
                     elif self.state == 'LEVEL_UP':
