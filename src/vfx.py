@@ -60,7 +60,7 @@ class AnimationPlayer:
         margin = data_dict.get('margin', 0)
         
         # 2. 切割帧
-        self.frames = slice_frames(full_image, frame_count, frame_w)
+        self.frames = slice_frames(full_image, frame_count, frame_w, spacing, margin)
         
         # 3. 播放状态
         self.frame_index = 0
@@ -144,22 +144,46 @@ class FlashEffect(pygame.sprite.Sprite):
 
 class Explosion(pygame.sprite.Sprite):
     """死亡/爆炸特效"""
-    def __init__(self, pos, groups, texture, frame_count=5, scale=2.0):
+    def __init__(self, pos, groups, texture, frame_count=12, scale=2.0):
         super().__init__(groups)
         self.z_layer = LAYERS['vfx_top']
-        self.frames = slice_frames(texture, frame_count)
         
-        # [修改] 构造一个临时的 data_dict 给 AnimationPlayer 用
-        # 这样我们就不需要手动写 slice_frames 和 update 逻辑了
+        # [优化] 明确设置每帧大小为 64x64，确保正确裁切
+        # 期望每帧大小为 64x64
+        frame_width = 64
+        frame_height = 64
+        
+        # 构造 data_dict 给 AnimationPlayer 用
         anim_data = {
             'frames': frame_count,
-            'frame_width': 0, # 0 = 自动计算
+            'frame_width': frame_width,  # 明确设置为 64
             'spacing': 0,
             'margin': 0
         }
         
-        # 使用 AnimationPlayer
+        # 使用 AnimationPlayer 进行帧切割
         self.anim_player = AnimationPlayer(texture, anim_data, default_speed=20)
+        
+        # [关键修复] 确保每帧都是 64x64 大小
+        # slice_frames 使用整个图片高度作为帧高度，所以需要后处理确保每帧都是 64x64
+        for i, frame in enumerate(self.anim_player.frames):
+            frame_w, frame_h = frame.get_size()
+            if frame_w != frame_width or frame_h != frame_height:
+                # 如果尺寸不匹配，进行裁切或缩放
+                if frame_w >= frame_width and frame_h >= frame_height:
+                    # 裁切到中心 64x64 区域（从中心裁切）
+                    x_offset = (frame_w - frame_width) // 2
+                    y_offset = (frame_h - frame_height) // 2
+                    rect = pygame.Rect(x_offset, y_offset, frame_width, frame_height)
+                    try:
+                        self.anim_player.frames[i] = frame.subsurface(rect)
+                    except ValueError:
+                        # 如果裁切失败，使用缩放
+                        self.anim_player.frames[i] = pygame.transform.scale(frame, (frame_width, frame_height))
+                else:
+                    # 如果更小，则缩放
+                    self.anim_player.frames[i] = pygame.transform.scale(frame, (frame_width, frame_height))
+        
         self.scale = scale
         
         # 初始化第一帧

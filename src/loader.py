@@ -26,7 +26,10 @@ class ResourceManager:
         graphics_path = os.path.join(self.assets_path, 'graphics')
         self._load_graphics_recursive(graphics_path)
         
-        # 2. 加载 JSON 配置
+        # 2. 加载音频资源
+        self._load_audio()
+        
+        # 3. 加载 JSON 配置
         # 必须确保 JSON 中的 "image" 字段的值，在上面的 self.images 中能找到 Key
         self._load_json('upgrades.json', 'upgrades', ID_RANGE_UPGRADE)
         self._load_json('enemies.json', 'enemies', ID_RANGE_ENEMY)
@@ -123,6 +126,40 @@ class ResourceManager:
         except Exception as e:
             print(f"[ERROR] JSON parse error in {filename}: {e}")
 
+    def _load_audio(self):
+        """加载音频资源（BGM 和 SFX）"""
+        # 初始化 pygame mixer
+        pygame.mixer.init()
+        
+        # 加载 BGM
+        bgm_path = os.path.join(self.assets_path, 'audio', 'bgm')
+        if os.path.exists(bgm_path):
+            for file in os.listdir(bgm_path):
+                if file.lower().endswith(('.mp3', '.ogg', '.wav')):
+                    file_name_no_ext = os.path.splitext(file)[0].lower()
+                    full_path = os.path.join(bgm_path, file)
+                    try:
+                        # BGM 使用 pygame.mixer.music 加载，但我们也保存路径
+                        self.sounds[file_name_no_ext] = full_path
+                        print(f"[AUDIO] Loaded BGM: {file_name_no_ext}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to load BGM {full_path}: {e}")
+        
+        # 加载 SFX
+        sfx_path = os.path.join(self.assets_path, 'audio', 'sfx')
+        if os.path.exists(sfx_path):
+            for file in os.listdir(sfx_path):
+                if file.lower().endswith(('.mp3', '.ogg', '.wav')):
+                    file_name_no_ext = os.path.splitext(file)[0].lower()
+                    full_path = os.path.join(sfx_path, file)
+                    try:
+                        # SFX 使用 pygame.mixer.Sound 加载
+                        sound = pygame.mixer.Sound(full_path)
+                        self.sounds[file_name_no_ext] = sound
+                        print(f"[AUDIO] Loaded SFX: {file_name_no_ext}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to load SFX {full_path}: {e}")
+
     def get_image(self, key):
         """安全获取图片，缺失返回洋红色方块"""
         key = str(key).lower()
@@ -133,3 +170,8 @@ class ResourceManager:
             surf = pygame.Surface((32, 32))
             surf.fill((255, 0, 255)) # 纯洋红
             return surf
+    
+    def get_sound(self, key):
+        """安全获取音效"""
+        key = str(key).lower()
+        return self.sounds.get(key)

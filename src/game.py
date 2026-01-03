@@ -9,6 +9,7 @@ from src.components import YSortCameraGroup, Tile
 from src.upgrade_system import UpgradeManager
 from src.ui import UI
 from src.map_manager import MapManager
+from src.audio_manager import AudioManager
 
 class Game:
     def __init__(self):
@@ -44,7 +45,12 @@ class Game:
 
         self.ui = UI(self.screen, self.loader) 
         
+        # 初始化音频管理器
+        self.audio_manager = AudioManager(self.loader)
+        
         self.state = 'MENU'
+        # 初始化时播放主菜单音乐
+        self.audio_manager.update_music_for_state(self.state)
 
     def enemy_spawner(self, dt):
         self.spawn_timer += dt * 1000 
@@ -101,6 +107,9 @@ class Game:
                     continue
 
     def update(self, dt):
+        # 根据游戏状态更新背景音乐
+        self.audio_manager.update_music_for_state(self.state)
+        
         if self.state == 'MENU':
             pass  # 主菜单状态下不更新游戏逻辑
         elif self.state == 'TUTORIAL':
@@ -138,6 +147,9 @@ class Game:
         self.all_sprites.empty()
         self.obstacle_sprites.empty()
         self.enemy_sprites.empty()
+        
+        # 重置音频管理器
+        self.audio_manager.reset()
         
         # 重新生成地图和玩家
         self.map_manager.generate_forest()

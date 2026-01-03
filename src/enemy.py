@@ -80,6 +80,6 @@ class Enemy(Entity):
         # 播放死亡爆炸动画
         expl_surf = self.res.get_image('vfx_explosion') 
         if expl_surf.get_width() > 32:
-             Explosion(self.rect.center, self.groups(), expl_surf, frame_count=5, scale=2.5)
+             Explosion(self.rect.center, self.groups(), expl_surf, frame_count=12, scale=2.5)
         
         self.kill()
