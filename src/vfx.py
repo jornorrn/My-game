@@ -290,9 +290,18 @@ class FlashEffect(pygame.sprite.Sprite):
 
 class Explosion(pygame.sprite.Sprite):
     """死亡/爆炸特效"""
-    def __init__(self, pos, groups, texture, frame_count=12, scale=2.0):
+    # 类变量：跟踪当前存在的特效数量
+    _active_count = 0
+    
+    def __init__(self, pos, groups, texture, frame_count=12, scale=1.0):
         super().__init__(groups)
         self.z_layer = LAYERS['vfx_top']
+        
+        # [优化] 检查特效数量限制
+        if Explosion._active_count >= MAX_VFX_COUNT:
+            # 如果特效过多，直接销毁，不创建新特效
+            self.kill()
+            return
         
         # [优化] 明确设置每帧大小为 64x64，确保正确裁切
         # 期望每帧大小为 64x64
@@ -336,6 +345,9 @@ class Explosion(pygame.sprite.Sprite):
         self.image = self.anim_player.get_frame_image(0, loop=False, scale=self.scale)
         self.rect = self.image.get_rect(center=pos)
         self.hitbox = self.rect.copy()
+        
+        # [优化] 增加活跃特效计数
+        Explosion._active_count += 1
 
     def update(self, dt):
         # get_frame_image 内部处理了帧更新
@@ -343,6 +355,8 @@ class Explosion(pygame.sprite.Sprite):
         img = self.anim_player.get_frame_image(dt, loop=False, scale=self.scale)
         
         if self.anim_player.finished:
+            # [优化] 减少活跃特效计数
+            Explosion._active_count = max(0, Explosion._active_count - 1)
             self.kill()
         elif img:
             self.image = img

@@ -205,6 +205,9 @@ class UI:
             self.info_font = pygame.font.Font('assets/fonts/pixel.ttf', 30)
             self.card_title_font = pygame.font.Font('assets/fonts/pixel.ttf', 32)
             self.card_desc_font = pygame.font.Font('assets/fonts/pixel.ttf', 20)
+            # 等级显示字体（更大、加粗）
+            self.level_font = pygame.font.Font('assets/fonts/pixel.ttf', 36)
+            self.level_font.set_bold(True)
             # 主菜单字体
             self.menu_title_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 120)
             self.menu_button_font = pygame.font.Font('assets/fonts/CevicheOne.ttf', 48)
@@ -214,6 +217,9 @@ class UI:
             self.info_font = pygame.font.Font(None, 30)
             self.card_title_font = pygame.font.Font(None, 40)
             self.card_desc_font = pygame.font.Font(None, 24)
+            # 等级显示字体 fallback
+            self.level_font = pygame.font.Font(None, 36)
+            self.level_font.set_bold(True)
             # 主菜单字体 fallback
             self.menu_title_font = pygame.font.Font(None, 120)
             self.menu_button_font = pygame.font.Font(None, 48)
@@ -415,6 +421,17 @@ class UI:
     def draw_hud(self, player):
         '''绘制战斗HUD'''
         self.draw_bar(20, 20, player.current_hp, player.stats['max_hp'], target_width=300)
+        
+        # 在血条右侧显示等级
+        level_text = f"LV.{player.level}"
+        level_surf = self.level_font.render(level_text, False, (255, 255, 255))  # 白色字体，加粗
+        # 血条右端位置：x=20, width=300，所以右端在320，加上间距30
+        level_x = 20 + 300 + 30
+        # 垂直居中，与血条对齐
+        level_y = 20 + self.frame_height // 2
+        level_rect = level_surf.get_rect(midleft=(level_x, level_y))
+        self.display_surface.blit(level_surf, level_rect)
+        
         mouse_pos = pygame.mouse.get_pos()
         for btn in self.hud_buttons:
             btn.update(mouse_pos)

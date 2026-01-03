@@ -123,8 +123,12 @@ class MapManager:
             elif type_name == 'deco':
                 # 随机选一个装饰
                 img = random.choice(deco_images)
-                # 如果原图 64x64 太大，可以在这里写死一个固定缩放，比如 0.8
-                # Tile(pos, [self.game.all_sprites], 'deco', surface=img)
+                # 将装饰物缩放到 64x64
+                img_scaled = pygame.transform.smoothscale(img, (64, 64))
+                # 调整位置使装饰物居中在网格上（装饰物64x64，网格32x32，需要向左上偏移16像素）
+                deco_pos = (pos[0] - 16, pos[1] - 16)
+                # 创建装饰物 Tile，放在 ground 层
+                Tile(deco_pos, [self.game.all_sprites], 'deco', surface=img_scaled)
             
             elif type_name == 'tree':
                 # 随机选一种树

@@ -187,11 +187,25 @@ class Enemy(Entity):
         """
         self.current_hp -= amount
         print(f"[DEBUG] Enemy hit! Damage: {amount}, Remaining HP: {self.current_hp}")
-        # 防止特效加入 enemy_sprites 组
-        # self.groups()[0] 通常是 all_sprites (YSortCameraGroup)
-        # 我们只把特效加到渲染组，不加到碰撞组
-        render_group = self.groups()[0] 
-        FlashEffect(self, [render_group], duration=0.1)
+        # [优化] 减少受击特效生成频率，避免后期特效过多
+        import random
+        from src.settings import MAX_ENEMIES
+        
+        # 如果玩家等级较高或敌人数量很多，减少受击特效生成
+        should_create_flash = True
+        if self.player.level > 15:
+            # 15级后，只有30%概率生成受击特效
+            should_create_flash = random.random() < 0.3
+        elif len([s for s in self.groups()[0].sprites() if hasattr(s, 'stats')]) > MAX_ENEMIES * 0.6:
+            # 敌人数量超过60%上限时，50%概率生成受击特效
+            should_create_flash = random.random() < 0.5
+        
+        if should_create_flash:
+            # 防止特效加入 enemy_sprites 组
+            # self.groups()[0] 通常是 all_sprites (YSortCameraGroup)
+            # 我们只把特效加到渲染组，不加到碰撞组
+            render_group = self.groups()[0] 
+            FlashEffect(self, [render_group], duration=0.1)
         # 死亡判定
         if self.current_hp <= 0:
             self.die()
@@ -210,10 +224,27 @@ class Enemy(Entity):
             # 播放死亡音效（只有正常死亡才播放）
             if self.audio_manager:
                 self.audio_manager.play_sfx('sfx_enemydied', volume=0.6)
-            # 播放死亡爆炸动画（只有正常死亡才播放）
-            expl_surf = self.res.get_image('vfx_explosion') 
-            if expl_surf.get_width() > 32:
-                 Explosion(self.rect.center, self.groups(), expl_surf, frame_count=12, scale=2.5)
+            # [优化] 检查特效数量，只在特效数量未达上限时创建
+            # 当敌人数量过多时，减少特效生成频率
+            from src.settings import MAX_VFX_COUNT, MAX_ENEMIES
+            import random
+            should_create_vfx = True
+            
+            # 如果敌人数量很多，随机跳过部分特效
+            # 通过检查 enemy_sprites 组的大小来判断（需要传入或访问）
+            # 这里使用一个简单的方法：通过检查所有精灵中敌人的数量
+            # 由于 enemy_sprites 组在 game 中，我们无法直接访问，所以使用概率控制
+            # 当敌人密度高时（通过检查周围敌人数量或使用固定概率）
+            # 使用固定概率：后期减少50%的特效生成
+            if self.player.level > 10:
+                # 10级后，50%概率跳过特效生成
+                should_create_vfx = random.random() < 0.5
+            
+            # 播放死亡爆炸动画（只有正常死亡且允许创建特效时才播放）
+            if should_create_vfx:
+                expl_surf = self.res.get_image('vfx_explosion') 
+                if expl_surf and expl_surf.get_width() > 32:
+                    Explosion(self.rect.center, self.groups(), expl_surf, frame_count=12, scale=1.25)
         else:
             # 墙外死亡，静默移除，不播放音效和动画
             print(f"[DEBUG] Enemy removed (out of bounds), no XP given")

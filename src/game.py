@@ -128,8 +128,23 @@ class Game:
             
             if not available_enemies: return
 
-            # [修改] 根据等级计算生成数量，实现指数级增长
-            spawn_count = max(1, int(1.5 ** (self.player.level - 1)))
+            # [优化] 使用对数增长公式，避免后期怪物数量爆炸
+            # 公式：基础数量 + log(等级) * 系数，并设置上限
+            import math
+            base_count = 1
+            log_factor = 2.0  # 对数增长系数
+            max_per_spawn = MAX_SPAWN_COUNT  # 单次最大生成数量
+            
+            # 使用对数增长：1级=1, 5级≈2, 10级≈3, 20级≈4, 30级≈5
+            spawn_count = min(max_per_spawn, 
+                            max(1, base_count + int(math.log(self.player.level) * log_factor)))
+            
+            # [优化] 检查当前敌人数量，如果已接近上限则减少生成
+            current_enemy_count = len(self.enemy_sprites)
+            if current_enemy_count >= MAX_ENEMIES * 0.8:  # 达到80%上限时
+                spawn_count = max(1, spawn_count // 2)  # 减半生成
+            elif current_enemy_count >= MAX_ENEMIES:  # 已达到上限
+                return  # 不生成新敌人
             
             # 随机坐标逻辑 (严格限制在墙内)
             # 墙在网格坐标 0 和 width-1, height-1
@@ -147,8 +162,11 @@ class Game:
             if max_x <= min_x or max_y <= min_y:
                 return  # 地图太小，无法生成怪物
             
-            # [修改] 循环生成多个怪物
+            # [优化] 循环生成多个怪物，但限制总数量
             for _ in range(spawn_count):
+                # 再次检查敌人数量（防止循环中超过上限）
+                if len(self.enemy_sprites) >= MAX_ENEMIES:
+                    break
                 enemy_id = random.choice(available_enemies)
                 spawned = False
                 
