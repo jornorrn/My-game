@@ -65,11 +65,26 @@ class Player(Entity):
         from src.components import Shadow
         shadow_img = resource_manager.get_image('shadow')
         if shadow_img:
-            shadow_surf = shadow_img.copy()
-            # 缩放阴影图片为合适尺寸（entity类型使用24x10）
-            shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
-            # 设置半透明效果（50%透明度）
-            shadow_surf.set_alpha(128)
+            # 确保原始图片支持每像素透明度
+            shadow_img = shadow_img.convert_alpha()
+            
+            # 创建目标尺寸的透明 Surface
+            shadow_surf = pygame.Surface((24, 10), pygame.SRCALPHA)
+            
+            # 缩放原始图片
+            scaled = pygame.transform.smoothscale(shadow_img, (24, 10))
+            
+            # 将缩放后的图片 blit 到透明 Surface 上
+            shadow_surf.blit(scaled, (0, 0))
+            
+            # 调整整体透明度：使用像素数组调整每像素 alpha（50% 透明度）
+            if shadow_surf.get_flags() & pygame.SRCALPHA:
+                # 获取像素数组
+                pixels_alpha = pygame.surfarray.pixels_alpha(shadow_surf)
+                # 将 alpha 值减半（50% 透明度）
+                pixels_alpha[:] = (pixels_alpha * 0.5).astype(pixels_alpha.dtype)
+                del pixels_alpha  # 释放数组锁定
+            
             Shadow(self, groups, shadow_surf)
 
         # 数值属性
