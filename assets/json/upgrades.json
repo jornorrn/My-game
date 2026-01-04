@@ -242,14 +242,14 @@
     {
         "id": 1034,
         "title": "知识的熟练",
-        "desc": "所有武器: 冷却 -30%",
+        "desc": "所有武器: 冷却-30%",
         "image": "icon_book", 
         "tier": 2,
         "type": "weapon_buff",
         "data": {
             "target": "all",
             "mode": "mult",
-            "effects": { "cooldown": 1.3 }
+            "effects": { "cooldown": 0.6 }
         }
     },
     {
@@ -261,7 +261,7 @@
         "type": "weapon_buff",
         "data": {
             "target": "all",
-            "mode": "mult",
+            "mode": "add",
             "effects": { "data.scale": 0.3, "data.radius": 10 }
         }
     },

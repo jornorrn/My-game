@@ -5,7 +5,7 @@ from src.settings import *
 from src.components import Tile, AnimatedTile, Shadow
 
 class MapManager:
-    def __init__(self, game, map_width=80, map_height=60):
+    def __init__(self, game, map_width=120, map_height=80):
         self.game = game
         self.width = map_width
         self.height = map_height
@@ -54,7 +54,7 @@ class MapManager:
             attempts += 1
                 
         # 5. 撒装饰物 (非障碍)
-        for _ in range(100):
+        for _ in range(80):
             x = random.randint(1, self.width - 2)
             y = random.randint(1, self.height - 2)
             if (x, y) not in self.grid:
