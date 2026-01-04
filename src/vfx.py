@@ -22,15 +22,25 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
         # 计算精确坐标
         x = margin + i * (frame_w + spacing)
         
-        # [关键修复] 安全检查：如果切片右边缘超出了图片总宽，停止切割
-        # 这能防止 ValueError: subsurface rectangle outside surface area
-        if x + frame_w > sheet_w:
+        # [改进] 处理最后一帧：如果超出范围，使用剩余宽度
+        if x >= sheet_w:
+            # 如果起始位置已经超出，停止切割
             break
+        
+        # 计算实际可用的帧宽度
+        actual_frame_w = frame_w
+        if x + frame_w > sheet_w:
+            # 最后一帧：使用剩余的所有宽度
+            actual_frame_w = sheet_w - x
+            if actual_frame_w <= 0:
+                # 如果剩余宽度为0或负数，跳过这一帧
+                break
             
-        rect = pygame.Rect(x, 0, frame_w, sheet_h)
+        rect = pygame.Rect(x, 0, actual_frame_w, sheet_h)
         try:
             frames.append(sheet.subsurface(rect))
         except ValueError:
+            # 如果subsurface失败，停止切割
             break
             
     # 如果切割失败（比如图片太小切不出来），至少返回原图防止崩溃
@@ -60,6 +70,11 @@ class AnimationPlayer:
         
         # 2. 切割帧
         self.frames = slice_frames(full_image, frame_count, frame_w, spacing, margin)
+        
+        # [调试] 检查实际切出的帧数是否与预期一致
+        if len(self.frames) != frame_count:
+            print(f"[WARNING] AnimationPlayer: 预期 {frame_count} 帧，实际切出 {len(self.frames)} 帧")
+            print(f"  图片尺寸: {full_image.get_size()}, frame_width: {frame_w}, spacing: {spacing}, margin: {margin}")
         
         # 3. 播放状态
         self.frame_index = 0

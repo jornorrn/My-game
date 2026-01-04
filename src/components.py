@@ -82,6 +82,40 @@ class Entity(GameSprite):
                     if self.direction.y < 0:
                         self.hitbox.top = sprite.hitbox.bottom
 
+def create_shadow(target_sprite, groups, resource_manager, shadow_type='entity'):
+    """
+    统一的影子创建函数
+    
+    Args:
+        target_sprite: 目标精灵对象
+        groups: 精灵组列表
+        resource_manager: 资源管理器
+        shadow_type: 影子类型 ('entity' 玩家/敌人, 'tree' 树木)
+    
+    Returns:
+        Shadow对象
+    """
+    # 获取原始影子图片
+    shadow_img = resource_manager.get_image('shadow_enemies')
+    if not shadow_img:
+        return None
+    
+    # 创建副本，避免修改原始资源
+    shadow_surf = shadow_img.copy()
+    
+    # 根据类型设置尺寸
+    if shadow_type == 'tree':
+        # 树木较大，使用稍大的影子
+        shadow_surf = pygame.transform.scale(shadow_surf, (28, 14))
+    else:
+        # 玩家和敌人使用标准尺寸
+        shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
+    
+    # 统一透明度为50%
+    shadow_surf.set_alpha(128)
+    
+    return Shadow(target_sprite, groups, shadow_surf)
+
 class Shadow(pygame.sprite.Sprite):
     """通用阴影类"""
     def __init__(self, target_sprite, groups, shadow_surf):
@@ -91,7 +125,7 @@ class Shadow(pygame.sprite.Sprite):
         self.image = shadow_surf
         self.rect = self.image.get_rect()
         self.z_layer = LAYERS['vfx_bottom']
-        # [修复] 添加 hitbox 防止 collision 检测报错
+        # 添加 hitbox 防止 collision 检测报错
         self.hitbox = self.rect 
         
         # 初始位置
@@ -112,10 +146,10 @@ class Shadow(pygame.sprite.Sprite):
 class Tile(GameSprite):
     """
     地图图块类 (墙壁、地板、装饰物)
-    支持：高墙逻辑 (Hitbox只在底部)、自动生成阴影
+    支持：高墙逻辑 (Hitbox只在底部)
     """
     def __init__(self, pos, groups, sprite_type, surface, 
-                 shadow_surf=None, scale_to_width=None):
+                 scale_to_width=None):
         super().__init__(groups, pos, z_layer=LAYERS['ground'])
         self.sprite_type = sprite_type
 
@@ -158,10 +192,6 @@ class Tile(GameSprite):
             self.hitbox = pygame.Rect(self.rect.left, self.rect.bottom - TILE_SIZE, TILE_SIZE, TILE_SIZE)
             # 微调：稍微缩小一点方便移动
             self.hitbox = self.hitbox.inflate(0, -10)
-            
-            # [新增] 生成阴影 (如果是树)
-            if sprite_type == 'tree' and shadow_surf:
-                Shadow(self, groups, shadow_surf)
                 
         else:
             # 地板、装饰物

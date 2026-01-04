@@ -30,12 +30,18 @@ class Enemy(Entity):
         self.image = self.anim_player.get_frame_image(0, loop=True, scale=self.scale)
 
         # 生成阴影
-        shadow_img = self.res.get_image('shadows')
-        shadow_img = pygame.transform.scale(shadow_img, (24, 10))
-        shadow_img.set_alpha(100)
-        
-        from src.components import Shadow # 局部导入防循环，或放顶部
-        Shadow(self, groups, shadow_img)
+        from src.components import Shadow
+        # 检查shadow key是否真实存在，避免使用占位图
+        if 'shadow' in resource_manager.images:
+            shadow_img = resource_manager.get_image('shadow')
+            # 创建副本，避免修改原始资源
+            shadow_surf = shadow_img.copy()
+            # 缩放阴影图片为合适尺寸（entity类型使用24x10）
+            shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
+            # 设置半透明效果（50%透明度）
+            shadow_surf.set_alpha(128)
+            # 创建Shadow对象
+            Shadow(self, groups, shadow_surf)
         
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
@@ -44,6 +50,9 @@ class Enemy(Entity):
         # [优化] 更新频率控制（根据距离玩家远近）
         self.update_frame_skip = 1  # 每帧更新
         self.frame_count = 0  # 帧计数器
+        
+        # [新增] 方向翻转状态：记录当前是否面向左侧，避免每帧重复翻转
+        self.facing_left = False
     
     def _check_out_of_bounds(self):
         """
@@ -111,6 +120,15 @@ class Enemy(Entity):
         # 2. 播放动画（根据更新频率）
         if should_update:
             self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
+        
+        # 2.5. [新增] 根据水平移动方向翻转图像
+        # 检查水平移动方向（direction.x < 0 表示向左移动）
+        is_moving_left = self.direction.x < 0
+        # 只在方向改变时翻转，避免每帧重复翻转
+        if is_moving_left != self.facing_left:
+            self.facing_left = is_moving_left
+            # 水平翻转图像（True表示水平翻转，False表示不垂直翻转）
+            self.image = pygame.transform.flip(self.image, True, False)
         
         # 3. 移动与碰撞伤害 (撞玩家) - 总是更新，确保碰撞检测准确
         self.move(dt)

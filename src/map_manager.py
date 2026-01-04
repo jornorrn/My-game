@@ -2,7 +2,7 @@
 import pygame
 import random
 from src.settings import *
-from src.components import Tile, AnimatedTile, Shadow
+from src.components import Tile, AnimatedTile
 
 class MapManager:
     def __init__(self, game, map_width=120, map_height=80):
@@ -92,11 +92,7 @@ class MapManager:
                 deco_images.append(surf)
                 
         if not deco_images: # 兜底
-            deco_images.append(pygame.Surface((32, 32))) 
-        
-        # 阴影
-        img_shadow = pygame.transform.scale(res.get_image('shadows'), (24, 12))
-        img_shadow.set_alpha(80)
+            deco_images.append(pygame.Surface((32, 32)))
 
         # 树木(8帧, 宽1536 -> 单帧192) 
         # 缩放到 0.3 -> 57x76 (约占 2x2 格)
@@ -153,11 +149,13 @@ class MapManager:
                 # 树木通常向上生长，所以 offset_y 设为负数，让根部对齐格子
                 offset = (0, cfg.get('offset_y', -30))
                 
-                AnimatedTile(pos, [self.game.all_sprites, self.game.obstacle_sprites], 'tree',
-                             surface=raw_surf, frame_data=frame_data, 
-                             visual_scale=cfg['scale'], offset=offset)
+                # 创建树对象并保存引用
+                tree = AnimatedTile(pos, [self.game.all_sprites, self.game.obstacle_sprites], 'tree',
+                                   surface=raw_surf, frame_data=frame_data, 
+                                   visual_scale=cfg['scale'], offset=offset)
                 
-                # 手动加阴影 (位置可能需要根据树的 scale 微调)
-                Shadow(self.game.all_sprites.sprites()[-1], [self.game.all_sprites], img_shadow)
+                # 为树创建阴影
+                from src.components import create_shadow
+                create_shadow(tree, [self.game.all_sprites], res, shadow_type='tree')
                 
         

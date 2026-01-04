@@ -6,7 +6,7 @@
         "image": "wind_wand",
         "effect": "bullet3001", 
         "cooldown": 500,
-        "damage": 10,
+        "damage": 12,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
@@ -17,7 +17,7 @@
         "image": "fire_wand",
         "effect": "bullet3002", 
         "cooldown": 500,
-        "damage": 10,
+        "damage": 12,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
@@ -28,7 +28,7 @@
         "image": "life_wand",
         "effect": "bullet3003", 
         "cooldown": 500,
-        "damage": 10,
+        "damage": 12,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
@@ -39,7 +39,7 @@
         "image": "light_wand",
         "effect": "bullet3004", 
         "cooldown": 500,
-        "damage": 10,
+        "damage": 12,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
@@ -50,7 +50,7 @@
         "image": "ice_wand",
         "effect": "bullet3005", 
         "cooldown": 500,
-        "damage": 10,
+        "damage": 12,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1 } 
     },
@@ -61,7 +61,7 @@
         "image": "wind_sword",
         "effect": "wind_sword",
         "cooldown": 300, 
-        "damage": 15,
+        "damage": 18,
         "speed": 120, 
         "data": { "radius": 100, "scale": 1.5 }
     },
@@ -72,7 +72,7 @@
         "image": "gold_sword",
         "effect": "gold_sword",
         "cooldown": 300, 
-        "damage": 15,
+        "damage": 18,
         "speed": 120, 
         "data": { "radius": 100, "scale": 1.5 }
     },
@@ -83,7 +83,7 @@
         "image": "ice_sword",
         "effect": "ice_sword",
         "cooldown": 300, 
-        "damage": 15,
+        "damage": 18,
         "speed": 120, 
         "data": { "radius": 100, "scale": 1.5 }
     },
@@ -94,7 +94,7 @@
         "image": "fire_sword",
         "effect": "fire_sword",
         "cooldown": 300, 
-        "damage": 15,
+        "damage": 18,
         "speed": 120, 
         "data": { "radius": 100, "scale": 1.5 }
     },
@@ -105,7 +105,7 @@
         "image": "blackGold_sword",
         "effect": "blackGold_sword",
         "cooldown": 300, 
-        "damage": 15,
+        "damage": 18,
         "speed": 120, 
         "data": { "radius": 100, "scale": 1.5 }
     },
@@ -116,7 +116,7 @@
         "image": "blue_orb",
         "effect": "blue_orbs",
         "cooldown": 500, 
-        "damage": 15,
+        "damage": 18,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
                     "margin": 0, "radius": 40, "scale": 4 }
@@ -128,7 +128,7 @@
         "image": "red_orb",
         "effect": "red_orbs",
         "cooldown": 500, 
-        "damage": 15,
+        "damage": 18,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
                     "margin": 0, "radius": 40, "scale": 4 }
@@ -140,7 +140,7 @@
         "image": "green_orb",
         "effect": "green_orbs",
         "cooldown": 500, 
-        "damage": 15,
+        "damage": 18,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
                     "margin": 0, "radius": 40, "scale": 4 }
@@ -152,7 +152,7 @@
         "image": "blackcut_orb",
         "effect": "blackcut_orbs",
         "cooldown": 500, 
-        "damage": 5,
+        "damage": 8,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
                     "margin": 0, "radius": 50, "scale": 5 }
@@ -164,7 +164,7 @@
         "image": "bluecut_orb",
         "effect": "bluecut_orbs",
         "cooldown": 500, 
-        "damage": 10,
+        "damage": 15,
         "speed": 15, 
         "data": { "frames": 11, "frame_width": 64, "spacing": 0, 
                     "margin": 0, "radius": 50, "scale": 5 }
@@ -176,7 +176,7 @@
         "image": "bigfire_wand",
         "effect": "bullet3016", 
         "cooldown": 500,
-        "damage": 30,
+        "damage": 35,
         "speed": 400,
         "data": { "frames": 4, "frame_width": 32, "scale": 1.5 } 
     },

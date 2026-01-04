@@ -60,13 +60,10 @@ class Player(Entity):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-4, -10) # 针对16x20的小人微调碰撞箱
         self.set_obstacles(obstacle_sprites)
-        # 生成阴影
-        shadow_img = self.res.get_image('shadows')
-        shadow_img = pygame.transform.scale(shadow_img, (24, 10))
-        shadow_img.set_alpha(100)
         
-        from src.components import Shadow # 局部导入防循环，或放顶部
-        Shadow(self, groups, shadow_img)
+        # 生成阴影
+        from src.components import create_shadow
+        create_shadow(self, groups, resource_manager, shadow_type='entity')
 
         # 数值属性
         self.stats = {
@@ -217,21 +214,27 @@ class Player(Entity):
     def calculate_xp_required(self, level):
         """
         根据等级计算所需经验值
-        使用指数增长曲线，使升级随等级提升变慢
-        公式：base * (multiplier ^ (level - 1))
+        使用分段公式：1-10级保持指数增长，10级后使用二次方程
+        目标：保持1-10级合理速度，10级后逐渐变慢，20级时升级时间约2-3分钟
         """
-        base_xp = 100  # 基础经验值（1级）
-        multiplier = 1.5  # 增长倍数，使升级变慢
-        
-        # 使用指数增长，匹配游戏难度
-        # 等级越高，所需经验值增长越快
-        xp_needed = base_xp * (multiplier ** (level - 1))
-        
-        # 为了匹配难度，可以添加额外的难度系数
-        # 例如：高等级时额外增加经验要求
-        if level > 10:
-            difficulty_bonus = 1.0 + (level - 10) * 0.1  # 10级后每级额外增加10%
-            xp_needed *= difficulty_bonus
+        if level <= 10:
+            # 1-10级：保持原有的指数增长（速度合理）
+            base_xp = 100  # 基础经验值（1级）
+            multiplier = 1.5  # 增长倍数
+            xp_needed = base_xp * (multiplier ** (level - 1))
+        else:
+            # 10级后：使用二次方程 xp = base_10 + a * (level - 10) + b * (level - 10)^2
+            # 先计算10级时的经验需求作为基准
+            base_10 = 100 * (1.5 ** 9)  # 约3844
+            
+            # 二次方程参数：调整使20级时升级时间约2-3分钟
+            # 假设20级时每秒获得约50-100经验，2-3分钟需要6000-18000经验
+            # 设置参数使增长平滑但不过快
+            a = 200  # 线性系数
+            b = 15   # 二次系数
+            
+            level_offset = level - 10
+            xp_needed = base_10 + a * level_offset + b * (level_offset ** 2)
         
         return int(xp_needed)
     

@@ -25,6 +25,35 @@ class ResourceManager:
         # 1. 递归加载所有图形资源 (不分文件夹，建立全局索引)
         graphics_path = os.path.join(self.assets_path, 'graphics')
         self._load_graphics_recursive(graphics_path)
+        # #region agent log
+        import json
+        try:
+            shadow_keys = [k for k in self.images.keys() if 'shadow' in k.lower()]
+            shadow_details = {}
+            for key in shadow_keys:
+                surf = self.images[key]
+                shadow_details[key] = {
+                    "size": surf.get_size(),
+                    "alpha": surf.get_alpha() if hasattr(surf, 'get_alpha') else None
+                }
+            with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({
+                    "sessionId": "shadow-overlap-debug",
+                    "runId": "run1",
+                    "hypothesisId": "K",
+                    "location": "loader.py:38",
+                    "message": "All shadow resources after loading",
+                    "data": {
+                        "shadow_keys": shadow_keys,
+                        "shadow_details": shadow_details,
+                        "total_images": len(self.images),
+                        "has_shadows_key": "shadows" in shadow_keys,
+                        "has_shadow_enemies_key": "shadow_enemies" in shadow_keys
+                    },
+                    "timestamp": __import__('time').time() * 1000
+                }) + "\n")
+        except: pass
+        # #endregion
         
         # 2. 加载音频资源
         self._load_audio()
@@ -63,6 +92,22 @@ class ResourceManager:
                             print(f"[WARNING] Duplicate filename found: {file_name_no_ext}. Overwriting.")
                         
                         self.images[file_name_no_ext] = surf
+                        # #region agent log
+                        if 'shadow' in file_name_no_ext.lower():
+                            import json
+                            try:
+                                with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
+                                    f.write(json.dumps({
+                                        "sessionId": "shadow-replace-check",
+                                        "runId": "run1",
+                                        "hypothesisId": "E",
+                                        "location": "loader.py:65",
+                                        "message": "Shadow resource loaded",
+                                        "data": {"key": file_name_no_ext, "file_path": full_path, "size": surf.get_size()},
+                                        "timestamp": __import__('time').time() * 1000
+                                    }) + "\n")
+                            except: pass
+                        # #endregion
                         
                     except Exception as e:
                         print(f"[ERROR] Failed to load image {full_path}: {e}")
@@ -163,10 +208,42 @@ class ResourceManager:
     def get_image(self, key):
         """安全获取图片，缺失返回洋红色方块"""
         key = str(key).lower()
+        # #region agent log
+        if 'shadow' in key:
+            import json
+            try:
+                with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({
+                        "sessionId": "shadow-replace-check",
+                        "runId": "run1",
+                        "hypothesisId": "G",
+                        "location": "loader.py:163",
+                        "message": "get_image called for shadow",
+                        "data": {"key": key, "key_exists": key in self.images, "all_shadow_keys": [k for k in self.images.keys() if 'shadow' in k]},
+                        "timestamp": __import__('time').time() * 1000
+                    }) + "\n")
+            except: pass
+        # #endregion
         if key in self.images:
             return self.images[key]
         else:
             # 缺失素材时的 Fallback：洋红色方块
+            # #region agent log
+            if 'shadow' in key:
+                import json
+                try:
+                    with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
+                        f.write(json.dumps({
+                            "sessionId": "shadow-replace-check",
+                            "runId": "run1",
+                            "hypothesisId": "G",
+                            "location": "loader.py:172",
+                            "message": "Shadow image missing, using fallback",
+                            "data": {"key": key, "available_keys": list(self.images.keys())[:10]},
+                            "timestamp": __import__('time').time() * 1000
+                        }) + "\n")
+                except: pass
+            # #endregion
             surf = pygame.Surface((32, 32))
             surf.fill((255, 0, 255)) # 纯洋红
             return surf
