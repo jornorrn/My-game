@@ -155,7 +155,14 @@ class MapManager:
                                    visual_scale=cfg['scale'], offset=offset)
                 
                 # 为树创建阴影
-                from src.components import create_shadow
-                create_shadow(tree, [self.game.all_sprites], res, shadow_type='tree')
+                from src.components import Shadow
+                shadow_img = res.get_image('shadow')
+                if shadow_img:
+                    shadow_surf = shadow_img.copy()
+                    # 树木较大，使用稍大的影子
+                    shadow_surf = pygame.transform.scale(shadow_surf, (28, 14))
+                    # 设置半透明效果（50%透明度）
+                    shadow_surf.set_alpha(128)
+                    Shadow(tree, [self.game.all_sprites], shadow_surf)
                 
         

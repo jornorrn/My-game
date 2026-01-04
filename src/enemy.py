@@ -31,9 +31,8 @@ class Enemy(Entity):
 
         # 生成阴影
         from src.components import Shadow
-        # 检查shadow key是否真实存在，避免使用占位图
-        if 'shadow' in resource_manager.images:
-            shadow_img = resource_manager.get_image('shadow')
+        shadow_img = resource_manager.get_image('shadow')
+        if shadow_img:
             # 创建副本，避免修改原始资源
             shadow_surf = shadow_img.copy()
             # 缩放阴影图片为合适尺寸（entity类型使用24x10）

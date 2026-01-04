@@ -62,8 +62,15 @@ class Player(Entity):
         self.set_obstacles(obstacle_sprites)
         
         # 生成阴影
-        from src.components import create_shadow
-        create_shadow(self, groups, resource_manager, shadow_type='entity')
+        from src.components import Shadow
+        shadow_img = resource_manager.get_image('shadow')
+        if shadow_img:
+            shadow_surf = shadow_img.copy()
+            # 缩放阴影图片为合适尺寸（entity类型使用24x10）
+            shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
+            # 设置半透明效果（50%透明度）
+            shadow_surf.set_alpha(128)
+            Shadow(self, groups, shadow_surf)
 
         # 数值属性
         self.stats = {

@@ -82,40 +82,6 @@ class Entity(GameSprite):
                     if self.direction.y < 0:
                         self.hitbox.top = sprite.hitbox.bottom
 
-def create_shadow(target_sprite, groups, resource_manager, shadow_type='entity'):
-    """
-    统一的影子创建函数
-    
-    Args:
-        target_sprite: 目标精灵对象
-        groups: 精灵组列表
-        resource_manager: 资源管理器
-        shadow_type: 影子类型 ('entity' 玩家/敌人, 'tree' 树木)
-    
-    Returns:
-        Shadow对象
-    """
-    # 获取原始影子图片
-    shadow_img = resource_manager.get_image('shadow_enemies')
-    if not shadow_img:
-        return None
-    
-    # 创建副本，避免修改原始资源
-    shadow_surf = shadow_img.copy()
-    
-    # 根据类型设置尺寸
-    if shadow_type == 'tree':
-        # 树木较大，使用稍大的影子
-        shadow_surf = pygame.transform.scale(shadow_surf, (28, 14))
-    else:
-        # 玩家和敌人使用标准尺寸
-        shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
-    
-    # 统一透明度为50%
-    shadow_surf.set_alpha(128)
-    
-    return Shadow(target_sprite, groups, shadow_surf)
-
 class Shadow(pygame.sprite.Sprite):
     """通用阴影类"""
     def __init__(self, target_sprite, groups, shadow_surf):
