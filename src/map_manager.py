@@ -153,3 +153,31 @@ class MapManager:
                 tree = AnimatedTile(pos, [self.game.all_sprites, self.game.obstacle_sprites], 'tree',
                                    surface=raw_surf, frame_data=frame_data, 
                                    visual_scale=cfg['scale'], offset=offset)
+                
+                # 为树创建阴影
+                from src.components import Shadow
+                shadow_img = res.get_image('shadow')
+                if shadow_img:
+                    # 确保原始图片支持每像素透明度
+                    shadow_img = shadow_img.convert_alpha()
+                    
+                    # 创建目标尺寸的透明 Surface（树木较大，使用稍大的影子）
+                    shadow_surf = pygame.Surface((28, 14), pygame.SRCALPHA)
+                    
+                    # 缩放原始图片
+                    scaled = pygame.transform.smoothscale(shadow_img, (28, 14))
+                    
+                    # 将缩放后的图片 blit 到透明 Surface 上
+                    shadow_surf.blit(scaled, (0, 0))
+                    
+                    # 调整整体透明度：使用像素数组调整每像素 alpha（50% 透明度）
+                    if shadow_surf.get_flags() & pygame.SRCALPHA:
+                        # 获取像素数组
+                        pixels_alpha = pygame.surfarray.pixels_alpha(shadow_surf)
+                        # 将 alpha 值减半（50% 透明度）
+                        pixels_alpha[:] = (pixels_alpha * 0.5).astype(pixels_alpha.dtype)
+                        del pixels_alpha  # 释放数组锁定
+                    
+                    Shadow(tree, [self.game.all_sprites], shadow_surf)
+                
+        

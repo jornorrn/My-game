@@ -111,10 +111,6 @@ class Enemy(Entity):
         else:
             self.direction = pygame.math.Vector2()
 
-        # 2. 播放动画（根据更新频率）
-        if should_update:
-            self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
-        
         # 2.5. [新增] 根据水平移动方向翻转图像
         # 检查水平移动方向（direction.x < 0 表示向左移动）
         is_moving_left = self.direction.x < 0
@@ -123,6 +119,12 @@ class Enemy(Entity):
             self.facing_left = is_moving_left
             # 水平翻转图像（True表示水平翻转，False表示不垂直翻转）
             self.image = pygame.transform.flip(self.image, True, False)
+            
+        # 2. 播放动画（根据更新频率）
+        if should_update:
+            self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
+        
+        
         
         # 3. 移动与碰撞伤害 (撞玩家) - 总是更新，确保碰撞检测准确
         self.move(dt)
