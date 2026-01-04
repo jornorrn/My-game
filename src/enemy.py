@@ -34,8 +34,7 @@ class Enemy(Entity):
         shadow_img = self.res.get_image('shadow')
         # 缩放阴影图片为合适尺寸（entity类型使用24x10）
         shadow_img = pygame.transform.scale(shadow_img, (24, 10))
-        # 设置半透明效果（50%透明度）
-        shadow_img.set_alpha(128)
+        # shadow_img.set_alpha(128)   # 设置半透明效果（50%透明度）
         Shadow(self, groups, shadow_img)
         
         self.rect = self.image.get_rect(topleft=pos)
