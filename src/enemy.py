@@ -122,7 +122,6 @@ class Enemy(Entity):
         敌人受击逻辑
         """
         self.current_hp -= amount
-        print(f"[DEBUG] Enemy hit! Damage: {amount}, Remaining HP: {self.current_hp}")
         # [优化] 减少受击特效生成频率，避免后期特效过多
         import random
         from src.settings import MAX_ENEMIES
@@ -156,7 +155,6 @@ class Enemy(Entity):
         # 只有正常死亡才给予经验值
         if give_xp:
             self.player.xp += self.stats.get('xp', 10)
-            print(f"[DEBUG] Enemy died. Player XP: {self.player.xp}")
             # 播放死亡音效（只有正常死亡才播放）
             if self.audio_manager:
                 self.audio_manager.play_sfx('sfx_enemydied', volume=0.6)
@@ -181,8 +179,5 @@ class Enemy(Entity):
                 expl_surf = self.res.get_image('vfx_explosion') 
                 if expl_surf and expl_surf.get_width() > 32:
                     Explosion(self.rect.center, self.groups(), expl_surf, frame_count=12, scale=1.25)
-        else:
-            # 墙外死亡，静默移除，不播放音效和动画
-            print(f"[DEBUG] Enemy removed (out of bounds), no XP given")
         
         self.kill()

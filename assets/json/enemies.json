@@ -19,7 +19,7 @@
         "speed": 80,
         "xp": 10,
         "tier": 1,
-        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.5 }
+        "data": { "frames": 10, "frame_width": 32, "speed": 4, "scale": 1.5 }
     },
     {
         "id": 2003,
@@ -30,7 +30,7 @@
         "speed": 85,
         "xp": 20,
         "tier": 2,
-        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.5 }
+        "data": { "frames": 10, "frame_width": 22, "speed": 4, "scale": 1.5 }
     },
     {
         "id": 2004,
@@ -41,7 +41,7 @@
         "speed": 90,
         "xp": 40,
         "tier": 3,
-        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 1.8 }
+        "data": { "frames": 10, "frame_width": 22, "speed": 4, "scale": 1.8 }
     },
     {
         "id": 2005,
@@ -52,7 +52,7 @@
         "speed": 95,
         "xp": 50,
         "tier": 4,
-        "data": { "frames": 6, "frame_width": 22, "speed": 4, "scale": 2.0 }
+        "data": { "frames": 10, "frame_width": 22, "speed": 4, "scale": 2.0 }
     },
     {
         "id": 2006,
@@ -63,7 +63,7 @@
         "speed": 120,
         "xp": 15,
         "tier": 1,
-        "data": { "frames": 6, "frame_width": 76, "speed": 6, "scale": 1.0 }
+        "data": { "frames": 8, "frame_width": 76, "speed": 6, "scale": 1.0 }
     },
     {
         "id": 2007,
@@ -74,7 +74,7 @@
         "speed": 70,
         "xp": 20,
         "tier": 1,
-        "data": { "frames": 6, "frame_width": 20, "speed": 4, "scale": 1.8 }
+        "data": { "frames": 8, "frame_width": 20, "speed": 4, "scale": 1.8 }
     },
     {
         "id": 2008,
