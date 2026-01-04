@@ -153,9 +153,3 @@ class MapManager:
                 tree = AnimatedTile(pos, [self.game.all_sprites, self.game.obstacle_sprites], 'tree',
                                    surface=raw_surf, frame_data=frame_data, 
                                    visual_scale=cfg['scale'], offset=offset)
-                
-                # 为树创建阴影
-                from src.components import create_shadow
-                create_shadow(tree, [self.game.all_sprites], res, shadow_type='tree')
-                
-        

@@ -60,11 +60,7 @@ class Player(Entity):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-4, -10) # 针对16x20的小人微调碰撞箱
         self.set_obstacles(obstacle_sprites)
-        
-        # 生成阴影
-        from src.components import create_shadow
-        create_shadow(self, groups, resource_manager, shadow_type='entity')
-
+    
         # 数值属性
         self.stats = {
             'max_hp': 100,

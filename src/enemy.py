@@ -31,17 +31,12 @@ class Enemy(Entity):
 
         # 生成阴影
         from src.components import Shadow
-        # 检查shadow key是否真实存在，避免使用占位图
-        if 'shadow' in resource_manager.images:
-            shadow_img = resource_manager.get_image('shadow')
-            # 创建副本，避免修改原始资源
-            shadow_surf = shadow_img.copy()
-            # 缩放阴影图片为合适尺寸（entity类型使用24x10）
-            shadow_surf = pygame.transform.scale(shadow_surf, (24, 10))
-            # 设置半透明效果（50%透明度）
-            shadow_surf.set_alpha(128)
-            # 创建Shadow对象
-            Shadow(self, groups, shadow_surf)
+        shadow_img = self.res.get_image('shadow')
+        # 缩放阴影图片为合适尺寸（entity类型使用24x10）
+        shadow_img = pygame.transform.scale(shadow_img, (24, 10))
+        # 设置半透明效果（50%透明度）
+        shadow_img.set_alpha(128)
+        Shadow(self, groups, shadow_img)
         
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-10, -10)
