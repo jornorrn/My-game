@@ -111,18 +111,60 @@ class Enemy(Entity):
         else:
             self.direction = pygame.math.Vector2()
 
-        # 2.5. [新增] 根据水平移动方向翻转图像
-        # 检查水平移动方向（direction.x < 0 表示向左移动）
-        is_moving_left = self.direction.x < 0
-        # 只在方向改变时翻转，避免每帧重复翻转
-        if is_moving_left != self.facing_left:
-            self.facing_left = is_moving_left
-            # 水平翻转图像（True表示水平翻转，False表示不垂直翻转）
-            self.image = pygame.transform.flip(self.image, True, False)
-            
-        # 2. 播放动画（根据更新频率）
+        # 2. 播放动画（根据更新频率）- 先获取动画帧
         if should_update:
             self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
+        
+        # 2.5. [修改] 根据玩家位置翻转图像（确保怪物朝向玩家）
+        # 计算玩家相对于怪物的位置
+        player_x = self.player.rect.centerx
+        enemy_x = self.rect.centerx
+        # 如果玩家在怪物左边，需要面向左（翻转图像）
+        # 素材默认"尾巴在左边，头在右边"（面向右侧），所以需要翻转才能面向左侧的玩家
+        should_face_left = player_x < enemy_x
+        
+        # 如果获取了新动画帧，需要根据当前方向重新应用翻转（因为新帧是未翻转的原始帧）
+        # 如果方向改变了，也需要重新获取当前帧并应用翻转
+        if should_update:
+            # 获取了新帧，根据当前方向重新应用翻转
+            if should_face_left:
+                self.image = pygame.transform.flip(self.image, True, False)
+            self.facing_left = should_face_left
+        elif should_face_left != self.facing_left:
+            # 方向改变了，需要重新获取当前帧并应用正确的翻转
+            # 因为无法"取消翻转"，所以需要从原始帧重新开始
+            # 获取当前帧索引（不更新动画进度）
+            current_frame_idx = int(self.anim_player.frame_index)
+            if current_frame_idx >= len(self.anim_player.frames):
+                current_frame_idx = len(self.anim_player.frames) - 1
+            if current_frame_idx < 0:
+                current_frame_idx = 0
+            
+            # 获取原始帧并应用缩放
+            raw_frame = self.anim_player.frames[current_frame_idx]
+            if self.scale != 1.0:
+                # 检查缓存
+                cache_key = (current_frame_idx, self.scale)
+                if cache_key in self.anim_player.scale_cache:
+                    self.image = self.anim_player.scale_cache[cache_key].copy()
+                else:
+                    w = int(raw_frame.get_width() * self.scale)
+                    h = int(raw_frame.get_height() * self.scale)
+                    scaled_img = pygame.transform.scale(raw_frame, (w, h))
+                    # 限制缓存大小
+                    if len(self.anim_player.scale_cache) > 50:
+                        keys_to_remove = list(self.anim_player.scale_cache.keys())[:25]
+                        for key in keys_to_remove:
+                            del self.anim_player.scale_cache[key]
+                    self.anim_player.scale_cache[cache_key] = scaled_img
+                    self.image = scaled_img.copy()
+            else:
+                self.image = raw_frame.copy()
+            
+            # 根据新方向应用翻转
+            if should_face_left:
+                self.image = pygame.transform.flip(self.image, True, False)
+            self.facing_left = should_face_left
         
         
         
