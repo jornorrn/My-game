@@ -142,22 +142,13 @@ class Tile(GameSprite):
             else:
                 self.z_layer = LAYERS['main']  # 墙保持在main层
             
-            # [核心逻辑] 处理“高物体”
-            # 如果图片高度大于 TILE_SIZE (比如 124px 的墙)，
-            # 我们认为它的“物理占地”只有最下面那一格 (32x32)
-            # 视觉上它会向上延伸
-            
-            # 重新调整 rect：让 rect 的底部对齐 pos 的底部
-            # 注意：传入的 pos 通常是 grid 坐标，即物体的左上角。
-            # 对于高物体，pos 应该是它“占地格子”的左上角。
-            
+            # 处理“高物体”
             # 底部对齐逻辑
             self.rect.bottomleft = (pos[0], pos[1] + TILE_SIZE)
-            
             # 碰撞箱只取底部(32x32)
             self.hitbox = pygame.Rect(self.rect.left, self.rect.bottom - TILE_SIZE, TILE_SIZE, TILE_SIZE)
             # 微调：稍微缩小一点方便移动
-            self.hitbox = self.hitbox.inflate(0, -10)
+            self.hitbox = self.hitbox.inflate(-10, -10)
                 
         else:
             # 地板、装饰物
@@ -165,8 +156,7 @@ class Tile(GameSprite):
             self.hitbox = self.rect # 地板不需要碰撞，但为了兼容性保留
             
             if sprite_type == 'deco':
-                # 装饰物也可以稍微有点遮挡关系，或者放在 ground 层
-                # 这里简单处理：放在 ground
+                # 装饰物放在 ground 层
                 pass
 
 class AnimatedTile(Tile):
@@ -194,7 +184,6 @@ class AnimatedTile(Tile):
         if sprite_type == 'tree':
             self.z_layer = LAYERS['vfx_top']  # 树放在顶层，实现完全遮挡
             # [核心对齐]：图片的底边中心 = 判定箱的底边中心 + 偏移量
-            # 只要你裁剪了图片底部的透明像素，这行代码能保证树根就在判定箱里
             target_x = self.hitbox.centerx + offset[0]
             target_y = self.hitbox.bottom + offset[1]
             self.rect.midbottom = (target_x, target_y)

@@ -52,7 +52,6 @@ class AudioManager:
             try:
                 sound.set_volume(volume)
                 sound.play()
-                print(f"[AUDIO] Playing SFX: {sfx_key} at volume {volume}")
             except Exception as e:
                 print(f"[ERROR] Failed to play SFX {sfx_key}: {e}")
     
