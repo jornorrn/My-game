@@ -28,8 +28,7 @@ class MapManager:
         self.grid = {}
         
         # 1. 填充基础地面 (虚拟填充，实际只存特殊块)
-        # 我们默认所有坐标都是草地，只记录墙、水、树
-        
+        # 默认所有坐标都是草地，只记录墙、水、树
         # 2. 生成边界墙
         for x in range(self.width):
             self.grid[(x, 0)] = 'wall'
@@ -37,11 +36,9 @@ class MapManager:
         for y in range(self.height):
             self.grid[(0, y)] = 'wall'
             self.grid[(self.width - 1, y)] = 'wall'
-            
         # 3. 生成随机水域 （已删除，因效果不佳。）
-            
         # 4. 撒树 (障碍物)
-        # 每个障碍物2x2范围内没有其他障碍物，使生成更均匀
+        # 每个障碍物2x2范围内没有其他障碍物
         trees_placed = 0
         max_attempts = 1000  # 防止无限循环
         attempts = 0
@@ -52,14 +49,12 @@ class MapManager:
                 self.grid[(x, y)] = 'tree'
                 trees_placed += 1
             attempts += 1
-                
         # 5. 撒装饰物 (非障碍)
-        for _ in range(80):
+        for _ in range(120):
             x = random.randint(1, self.width - 2)
             y = random.randint(1, self.height - 2)
             if (x, y) not in self.grid:
                 self.grid[(x, y)] = 'deco'
-
         # 6. 确定玩家出生点 (寻找一个空地)
         while True:
             cx = random.randint(self.width // 4, self.width * 3 // 4)
@@ -67,7 +62,6 @@ class MapManager:
             if (cx, cy) not in self.grid:
                 self.spawn_point = (cx * TILE_SIZE, cy * TILE_SIZE)
                 break
-                
         # 7. 实例化到游戏世界
         self._instantiate_map()
 
@@ -79,12 +73,6 @@ class MapManager:
         img_floor = res.get_image('tile_grass')
         img_wall = res.get_image('tile_wall')
         
-        # 调试：检查地板图片是否正确加载
-        if img_floor is None:
-            print("[ERROR] tile_grass image not loaded!")
-        else:
-            print(f"[DEBUG] tile_grass loaded: {img_floor.get_size()}")
-            
         # 装饰列表 (扫描所有 deco_ 开头的)
         deco_images = []
         for key, surf in res.images.items():
@@ -104,13 +92,9 @@ class MapManager:
         ]
         
         # --- 实例化 ---
-        
-        # 铺地板 - 修复：铺满整个地图（包括边缘）
-        # 原代码使用 width-1 和 height-1，导致缺少最后一列和最后一行地板
-        # 修复为 width 和 height，确保铺满整个地图
         floor_count = 0
-        for x in range(self.width):
-            for y in range(self.height):
+        for x in range(self.width-1):
+            for y in range(self.height-1):
                 pos = (x * TILE_SIZE, y * TILE_SIZE)
                 Tile(pos, [self.game.all_sprites], 'floor', surface=img_floor)
                 floor_count += 1
@@ -118,7 +102,7 @@ class MapManager:
         
         # 生成物件
         for coords, type_name in self.grid.items():
-            # 这里的 pos 是网格坐标
+            # 网格坐标
             pos = (coords[0] * TILE_SIZE, coords[1] * TILE_SIZE)
             
             if type_name == 'wall':
@@ -128,9 +112,7 @@ class MapManager:
                      surface=img_wall, scale_to_width=TILE_SIZE)
                 
             elif type_name == 'deco':
-                # 随机选一个装饰
                 img = random.choice(deco_images)
-                # 将装饰物缩放到 64x64
                 img_scaled = pygame.transform.smoothscale(img, (64, 64))
                 # 调整位置使装饰物居中在网格上（装饰物64x64，网格32x32，需要向左上偏移16像素）
                 deco_pos = (pos[0] - 16, pos[1] - 16)
@@ -146,38 +128,12 @@ class MapManager:
                     'frame_width': cfg['frame_width'], 
                     'speed': 5
                 }
-                # 树木通常向上生长，所以 offset_y 设为负数，让根部对齐格子
+                # offset_y 设为负数，让根部对齐格子
                 offset = (0, cfg.get('offset_y', -30))
                 
                 # 创建树对象并保存引用
                 tree = AnimatedTile(pos, [self.game.all_sprites, self.game.obstacle_sprites], 'tree',
                                    surface=raw_surf, frame_data=frame_data, 
                                    visual_scale=cfg['scale'], offset=offset)
-                
-                # 为树创建阴影
-                from src.components import Shadow
-                shadow_img = res.get_image('shadow')
-                if shadow_img:
-                    # 确保原始图片支持每像素透明度
-                    shadow_img = shadow_img.convert_alpha()
-                    
-                    # 创建目标尺寸的透明 Surface（树木较大，使用稍大的影子）
-                    shadow_surf = pygame.Surface((28, 14), pygame.SRCALPHA)
-                    
-                    # 缩放原始图片
-                    scaled = pygame.transform.smoothscale(shadow_img, (28, 14))
-                    
-                    # 将缩放后的图片 blit 到透明 Surface 上
-                    shadow_surf.blit(scaled, (0, 0))
-                    
-                    # 调整整体透明度：使用像素数组调整每像素 alpha（50% 透明度）
-                    if shadow_surf.get_flags() & pygame.SRCALPHA:
-                        # 获取像素数组
-                        pixels_alpha = pygame.surfarray.pixels_alpha(shadow_surf)
-                        # 将 alpha 值减半（50% 透明度）
-                        pixels_alpha[:] = (pixels_alpha * 0.5).astype(pixels_alpha.dtype)
-                        del pixels_alpha  # 释放数组锁定
-                    
-                    Shadow(tree, [self.game.all_sprites], shadow_surf)
                 
         

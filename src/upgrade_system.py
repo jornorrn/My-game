@@ -68,8 +68,7 @@ class WeaponBuffUpgrade(UpgradeOption):
         target = self.raw_data.get('target', 'all')
         mode = self.raw_data.get('mode', 'add')
         
-        # 1. 解析要修改的属性列表
-        # 优先读取 'effects' 字典；如果不存在，尝试兼容旧的 'attr'/'value' 写法
+        # 解析要修改的属性列表
         changes = {}
         if 'effects' in self.raw_data:
             changes = self.raw_data['effects']
@@ -81,32 +80,23 @@ class WeaponBuffUpgrade(UpgradeOption):
         
         count = 0
         for w_id, w_data in weapon_db.items():
-            # 筛选目标
-            if target != 'all' and str(w_id) != str(target):
+            if target != 'all' and str(w_id) != str(target):    # 筛选生效目标
                 continue
-            
-            # 应用所有变更项
+
             for key, val in changes.items():
-                
                 # A. 处理嵌套属性 (如 data.scale, data.radius)
                 if key.startswith('data.'):
                     sub_key = key.split('.')[1]
-                    
-                    # 确保 data 字典存在
-                    if 'data' not in w_data:
+                    if 'data' not in w_data:    # 保证data字典存在，避免报错
                         w_data['data'] = {}
-                    
                     # 获取当前值 (提供合理的默认值)
-                    # scale 默认为 1.0, radius 默认为 0 (或者是之前配置的值), frames 等其他值为 0
                     default_val = 1.0 if sub_key == 'scale' else 0
                     current_val = w_data['data'].get(sub_key, default_val)
-                    
                     # 计算新值
                     new_val = current_val
                     if mode == 'add': new_val += val
                     elif mode == 'mult': new_val *= val
                     elif mode == 'set': new_val = val
-                    
                     # 写回数据
                     w_data['data'][sub_key] = new_val
                     
@@ -114,7 +104,6 @@ class WeaponBuffUpgrade(UpgradeOption):
                 elif key in w_data:
                     current_val = w_data[key]
                     new_val = current_val
-                    
                     if mode == 'add': new_val += val
                     elif mode == 'mult': new_val *= val
                     elif mode == 'set': new_val = val
@@ -129,10 +118,8 @@ class HealUpgrade(UpgradeOption):   #type: heal
     def apply(self, player):
         amount = self.raw_data.get('amount', 0)
         old_hp = player.current_hp
-        
         # 回血并限制不超过上限
         player.current_hp = min(player.current_hp + amount, player.stats['max_hp'])
-        
         print(f"[UPGRADE] Healed {player.current_hp - old_hp} HP.")
 
 class SpecialUpgrade(UpgradeOption):    #type: special
@@ -141,7 +128,6 @@ class SpecialUpgrade(UpgradeOption):    #type: special
         val = self.raw_data['value']
         
         # 直接设置到 player 身上
-        # 例如 player.life_steal = True
         setattr(player, key, val)
         print(f"[UPGRADE] Set special ability '{key}' to {val}")
 
@@ -162,7 +148,7 @@ class UpgradeManager:
             try:
                 if u_type == 'stat':
                     self.db.append(StatUpgrade(item))
-                elif u_type == 'weapon_add' or u_type == 'weapon': # 兼容旧写法
+                elif u_type == 'weapon_add':
                     self.db.append(WeaponAddUpgrade(item))
                 elif u_type == 'weapon_buff':
                     self.db.append(WeaponBuffUpgrade(item))
@@ -185,7 +171,6 @@ class UpgradeManager:
         """
         valid_options = [opt for opt in self.db if opt.tier <= level]
         
-        # 如果过滤太狠没选项了，就放宽限制
         if not valid_options:
             return []
             

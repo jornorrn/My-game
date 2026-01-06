@@ -8,7 +8,6 @@ from src.vfx import FlashEffect
 class FloatingWeapon(pygame.sprite.Sprite):
     """纯装饰用的悬浮武器"""
     def __init__(self, groups, image, player, angle_offset, distance=50):
-        # 放在 vfx_top 层，不挡住玩家
         super().__init__(groups)
         self.player = player
         self.original_image = image
@@ -17,19 +16,12 @@ class FloatingWeapon(pygame.sprite.Sprite):
         self.angle_offset = angle_offset
         self.distance = distance
         self.rect = self.image.get_rect()
-        # 不需要 hitbox，因为只是装饰
 
     def update(self, dt):
         center = self.player.rect.center
-        
-        # 简单的环绕动画
-        # t = pygame.time.get_ticks() / 1000 # 旋转速度
-        # angle = t * 2 + math.radians(self.angle_offset) # 动态旋转
-        
-        # 或者 保持固定相对位置 (跟随身后)
+        # 保持固定相对位置 (跟随身后)
         rad = math.radians(self.angle_offset)
-        
-        # [修改] 距离计算：基于角色大小 + 基础距离 + 呼吸浮动
+        # 距离计算：基于角色大小 + 基础距离 + 呼吸浮动
         base_dist = (self.player.hitbox.width / 2) + 15 
         t = pygame.time.get_ticks() / 300
         hover_offset = math.sin(t + self.angle_offset) * 3
@@ -60,32 +52,6 @@ class Player(Entity):
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-4, -10) # 针对16x20的小人微调碰撞箱
         self.set_obstacles(obstacle_sprites)
-        
-        # 生成阴影
-        from src.components import Shadow
-        shadow_img = resource_manager.get_image('shadow')
-        if shadow_img:
-            # 确保原始图片支持每像素透明度
-            shadow_img = shadow_img.convert_alpha()
-            
-            # 创建目标尺寸的透明 Surface
-            shadow_surf = pygame.Surface((24, 10), pygame.SRCALPHA)
-            
-            # 缩放原始图片
-            scaled = pygame.transform.smoothscale(shadow_img, (24, 10))
-            
-            # 将缩放后的图片 blit 到透明 Surface 上
-            shadow_surf.blit(scaled, (0, 0))
-            
-            # 调整整体透明度：使用像素数组调整每像素 alpha（50% 透明度）
-            if shadow_surf.get_flags() & pygame.SRCALPHA:
-                # 获取像素数组
-                pixels_alpha = pygame.surfarray.pixels_alpha(shadow_surf)
-                # 将 alpha 值减半（50% 透明度）
-                pixels_alpha[:] = (pixels_alpha * 0.5).astype(pixels_alpha.dtype)
-                del pixels_alpha  # 释放数组锁定
-            
-            Shadow(self, groups, shadow_surf)
 
         # 数值属性
         self.stats = {
@@ -93,21 +59,19 @@ class Player(Entity):
             'speed': 300,        # 像素/秒
             'pickup_range': 150
         }
+        # 经验计算
         self.current_hp = self.stats['max_hp']
         self.xp = 0
         self.level = 1
         # 使用经验计算公式初始化经验要求
         self.xp_required = self.calculate_xp_required(self.level)
-        
         # 战斗状态
         self.is_dead = False
         self.iframes = 500       # 无敌时间 (毫秒)
         self.last_hit_time = 0
-        
         # 武器接口
         self.weapon_controller = WeaponController(self, groups, enemy_sprites, 
                         obstacle_sprites, resource_manager)
-        
         # 悬浮武器组
         self.floating_weapons = pygame.sprite.Group()
         self.visual_weapon_cache = [] # 记录当前显示的武器ID列表，防止每帧重建
@@ -124,24 +88,19 @@ class Player(Entity):
             if w_data and w_data.get('type', 'projectile') == 'projectile':
                 proj_ids.append(w_id)
         
-        # 如果列表没变，不处理
-        if proj_ids == self.visual_weapon_cache:
+        if proj_ids == self.visual_weapon_cache:    # 如果列表没变，不处理
             return
         self.visual_weapon_cache = proj_ids.copy()
-        # 清空旧的
-        for s in self.floating_weapons: s.kill()
+        for s in self.floating_weapons: s.kill()    # 清空旧的
         self.floating_weapons.empty()
-        # 重新生成
-        count = len(proj_ids)
+        count = len(proj_ids)   # 重新生成
         if count == 0: return
         
         # 排列逻辑：均匀分布在玩家身后 (-45度 到 225度) 或者是 360度
         step = 360 / count
         for i, w_id in enumerate(proj_ids):
             w_data = self.res.data['weapons'].get(w_id)
-            # 使用 ICON 图像
             img = self.res.get_image(w_data['image'])
-            # 缩小一点
             img = pygame.transform.scale(img, (24, 24))
             
             FloatingWeapon(
@@ -173,13 +132,8 @@ class Player(Entity):
 
     def import_assets(self):
         """切割 Sprite Sheet"""
-        # 1. 获取整张大图 (Key 是文件名，无后缀)
         sprite_sheet = self.res.get_image('character_18_frame16x20')
-        
-        # 2. 确认单帧尺寸 (根据文件名)
         frame_w, frame_h = 16, 20
-        
-        # 3. 切割逻辑 (假设 3列 4行: 下, 左, 右, 上)
         self.animations = {'down': [], 'left': [], 'right': [], 'up': []}
         
         # 辅助函数: 切割一行
@@ -188,9 +142,9 @@ class Player(Entity):
             for col in range(amount):
                 x = col * frame_w
                 y = row_index * frame_h
-                # subsurface 共享内存，效率高
+                # subsurface 共享内存
                 rect = pygame.Rect(x, y, frame_w, frame_h)
-                # 放大一点显示，不然16像素太小了 (可选，这里放大2倍)
+                # 放大两倍显示
                 surf = sprite_sheet.subsurface(rect)
                 scaled_surf = pygame.transform.scale(surf, (32, 40)) 
                 frames.append(scaled_surf)
@@ -204,22 +158,19 @@ class Player(Entity):
     def animate(self, dt):
         # 如果停止移动
         if self.direction.magnitude() == 0:
-            # [修改] 静止时显示第 1 帧 (中间的站立图)
+            # 静止时显示第 1 帧 (中间的站立图)
             self.image = self.animations[self.status][1]
-            # 可选：重置 frame_index 到 1，这样下次移动从 1 开始算
-            # self.frame_index = 1
         else:
             # 移动中：循环播放 0 -> 1 -> 2 -> 0
             self.frame_index += self.animation_speed * dt
             if self.frame_index >= len(self.animations[self.status]):
                 self.frame_index = 0
-            
             # 取整显示当前帧
             self.image = self.animations[self.status][int(self.frame_index)]
             
         # 保持 rect 中心对齐 (防止图片尺寸微小差异导致抖动)
-        # 注意：这行代码非常重要，必须保留
         self.rect = self.image.get_rect(center=self.hitbox.center)
+
     def get_mouse_direction(self):
         """计算鼠标相对于屏幕中心的角度，并改变朝向图片"""
         mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
@@ -240,18 +191,13 @@ class Player(Entity):
         目标：保持1-10级合理速度，10级后逐渐变慢，20级时升级时间约2-3分钟
         """
         if level <= 10:
-            # 1-10级：保持原有的指数增长（速度合理）
+            # 1-10级：指数增长
             base_xp = 100  # 基础经验值（1级）
             multiplier = 1.5  # 增长倍数
             xp_needed = base_xp * (multiplier ** (level - 1))
         else:
             # 10级后：使用二次方程 xp = base_10 + a * (level - 10) + b * (level - 10)^2
-            # 先计算10级时的经验需求作为基准
-            base_10 = 100 * (1.5 ** 9)  # 约3844
-            
-            # 二次方程参数：调整使20级时升级时间约2-3分钟
-            # 假设20级时每秒获得约50-100经验，2-3分钟需要6000-18000经验
-            # 设置参数使增长平滑但不过快
+            base_10 = 100 * (1.5 ** 9)  
             a = 200  # 线性系数
             b = 15   # 二次系数
             
@@ -265,7 +211,7 @@ class Player(Entity):
         if self.xp >= self.xp_required:
             self.xp -= self.xp_required
             self.level += 1
-            # 使用新的经验计算公式，使升级随等级提升变慢
+            # 升级随等级提升变慢
             self.xp_required = self.calculate_xp_required(self.level)
             return True
         return False
@@ -291,9 +237,9 @@ class Player(Entity):
         self.speed = self.stats['speed']
         self.input()
         self.get_mouse_direction()
-        self.animate(dt) # [新增] 驱动动画
+        self.animate(dt) # 驱动动画
         self.move(dt)
         self.weapon_controller.update()
         self.update_floating_weapons()
-        self.floating_weapons.update(dt) # 虽然 all_sprites 会 update 它们，但这不冲突
+        self.floating_weapons.update(dt) 
 

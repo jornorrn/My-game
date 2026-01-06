@@ -25,41 +25,11 @@ class ResourceManager:
         # 1. 递归加载所有图形资源 (不分文件夹，建立全局索引)
         graphics_path = os.path.join(self.assets_path, 'graphics')
         self._load_graphics_recursive(graphics_path)
-        # #region agent log
-        import json
-        try:
-            shadow_keys = [k for k in self.images.keys() if 'shadow' in k.lower()]
-            shadow_details = {}
-            for key in shadow_keys:
-                surf = self.images[key]
-                shadow_details[key] = {
-                    "size": surf.get_size(),
-                    "alpha": surf.get_alpha() if hasattr(surf, 'get_alpha') else None
-                }
-            with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({
-                    "sessionId": "shadow-overlap-debug",
-                    "runId": "run1",
-                    "hypothesisId": "K",
-                    "location": "loader.py:38",
-                    "message": "All shadow resources after loading",
-                    "data": {
-                        "shadow_keys": shadow_keys,
-                        "shadow_details": shadow_details,
-                        "total_images": len(self.images),
-                        "has_shadows_key": "shadows" in shadow_keys,
-                        "has_shadow_enemies_key": "shadow_enemies" in shadow_keys
-                    },
-                    "timestamp": __import__('time').time() * 1000
-                }) + "\n")
-        except: pass
-        # #endregion
         
         # 2. 加载音频资源
         self._load_audio()
         
         # 3. 加载 JSON 配置
-        # 必须确保 JSON 中的 "image" 字段的值，在上面的 self.images 中能找到 Key
         self._load_json('upgrades.json', 'upgrades', ID_RANGE_UPGRADE)
         self._load_json('enemies.json', 'enemies', ID_RANGE_ENEMY)
         self._load_json('weapons.json', 'weapons', ID_RANGE_WEAPON)
@@ -79,38 +49,18 @@ class ResourceManager:
                     # 获取不带后缀的文件名作为 Key
                     file_name_no_ext = os.path.splitext(file)[0].lower()
                     full_path = os.path.join(root, file)
+
+                    # SVG 文件需要特殊处理
+                    if file.lower().endswith('.svg'):
+                        surf = self._load_svg(full_path)
+                    else:
+                        surf = pygame.image.load(full_path).convert_alpha()
                     
-                    try:
-                        # SVG 文件需要特殊处理
-                        if file.lower().endswith('.svg'):
-                            surf = self._load_svg(full_path)
-                        else:
-                            surf = pygame.image.load(full_path).convert_alpha()
-                        
-                        # 检查重名冲突 (Warn only)
-                        if file_name_no_ext in self.images:
-                            print(f"[WARNING] Duplicate filename found: {file_name_no_ext}. Overwriting.")
-                        
-                        self.images[file_name_no_ext] = surf
-                        # #region agent log
-                        if 'shadow' in file_name_no_ext.lower():
-                            import json
-                            try:
-                                with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "shadow-replace-check",
-                                        "runId": "run1",
-                                        "hypothesisId": "E",
-                                        "location": "loader.py:65",
-                                        "message": "Shadow resource loaded",
-                                        "data": {"key": file_name_no_ext, "file_path": full_path, "size": surf.get_size()},
-                                        "timestamp": __import__('time').time() * 1000
-                                    }) + "\n")
-                            except: pass
-                        # #endregion
-                        
-                    except Exception as e:
-                        print(f"[ERROR] Failed to load image {full_path}: {e}")
+                    # 检查重名冲突 (Warn only)
+                    if file_name_no_ext in self.images:
+                        print(f"[WARNING] Duplicate filename found: {file_name_no_ext}. Overwriting.")
+                    
+                    self.images[file_name_no_ext] = surf
     
     def _load_svg(self, svg_path):
         """加载 SVG 文件，尝试使用 pygame 直接加载，失败则使用备用方法"""
@@ -127,7 +77,7 @@ class ResourceManager:
                 # 从字节流创建 Surface
                 return pygame.image.load(io.BytesIO(png_data)).convert_alpha()
             except ImportError:
-                # 如果 cairosvg 不可用，尝试直接加载（可能 pygame 支持但需要特定格式）
+                # 如果 cairosvg 不可用，尝试直接加载
                 print(f"[WARNING] SVG loading failed. Try installing cairosvg: pip install cairosvg")
                 # 返回一个占位符
                 surf = pygame.Surface((200, 100))
@@ -159,7 +109,7 @@ class ResourceManager:
                     print(f"[WARNING] ID {u_id} out of range {id_range} in {filename}")
                     continue
                 
-                # 2. 图片资源预检 (可选，但推荐)
+                # 2. 图片资源预检 
                 # 检查 item['image'] 是否在 self.images 里，如果不在，打印警告
                 if 'image' in item:
                     img_key = item['image'].lower()
@@ -184,7 +134,7 @@ class ResourceManager:
                     file_name_no_ext = os.path.splitext(file)[0].lower()
                     full_path = os.path.join(bgm_path, file)
                     try:
-                        # BGM 使用 pygame.mixer.music 加载，但我们也保存路径
+                        # 校验 BGM 文件是否存在
                         self.sounds[file_name_no_ext] = full_path
                         print(f"[AUDIO] Loaded BGM: {file_name_no_ext}")
                     except Exception as e:
@@ -207,43 +157,12 @@ class ResourceManager:
 
     def get_image(self, key):
         """安全获取图片，缺失返回洋红色方块"""
-        key = str(key).lower()
-        # #region agent log
-        if 'shadow' in key:
-            import json
-            try:
-                with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({
-                        "sessionId": "shadow-replace-check",
-                        "runId": "run1",
-                        "hypothesisId": "G",
-                        "location": "loader.py:163",
-                        "message": "get_image called for shadow",
-                        "data": {"key": key, "key_exists": key in self.images, "all_shadow_keys": [k for k in self.images.keys() if 'shadow' in k]},
-                        "timestamp": __import__('time').time() * 1000
-                    }) + "\n")
-            except: pass
-        # #endregion
+        key = str(key).lower()  #返回小写，避免大小写问题导致文件读取失败
+        
         if key in self.images:
             return self.images[key]
         else:
             # 缺失素材时的 Fallback：洋红色方块
-            # #region agent log
-            if 'shadow' in key:
-                import json
-                try:
-                    with open('/Users/aogo/My-game/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({
-                            "sessionId": "shadow-replace-check",
-                            "runId": "run1",
-                            "hypothesisId": "G",
-                            "location": "loader.py:172",
-                            "message": "Shadow image missing, using fallback",
-                            "data": {"key": key, "available_keys": list(self.images.keys())[:10]},
-                            "timestamp": __import__('time').time() * 1000
-                        }) + "\n")
-                except: pass
-            # #endregion
             surf = pygame.Surface((32, 32))
             surf.fill((255, 0, 255)) # 纯洋红
             return surf

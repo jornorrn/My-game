@@ -28,8 +28,7 @@ class Projectile(GameSprite):
         self.direction = pygame.math.Vector2(math.cos(rad), - math.sin(rad))
             
         # 使用通用控制器获取原始帧
-        # 注意：子弹比较特殊，因为需要旋转。如果每帧 update 都旋转，性能开销大。
-        # 最佳实践是：在 init 里把所有动画帧都预先旋转好。
+        # 子弹需要旋转，在 init 里把所有动画帧都预先旋转好，避免大性能开销
         
         # [逻辑] 检查占位符
         full_image = weapon_data.get('image_surf')
@@ -37,11 +36,10 @@ class Projectile(GameSprite):
         if full_image.get_size() == (32, 32):
              if full_image.get_at((16, 16)) == (255, 0, 255, 255):
                 is_placeholder = True
-        
         self.rotated_frames = []
         self.anim_player = None # 标记是否有动画
         
-        if is_placeholder:    # 黄色圆形占位符，不需要旋转
+        if is_placeholder:    # 替换为黄色圆形占位符，不需要旋转
             r = int(10 * self.scale)
             self.image = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
             pygame.draw.circle(self.image, (255, 200, 50), (r, r), r-2)
@@ -62,26 +60,21 @@ class Projectile(GameSprite):
                     scaled_frame = pygame.transform.scale(frame, (w, h))
                 else:
                     scaled_frame = frame
-                
                 # 2. 旋转
                 rotated_frame = pygame.transform.rotate(scaled_frame, final_angle)
                 self.rotated_frames.append(rotated_frame)
-            
+            # 动画播放
             self.image = self.rotated_frames[0]
             self.anim_player = True 
-
         self.frame_index = 0
         self.animation_speed = 10 
         
-        self.rect = self.image.get_rect(center=pos)
-
         # 3. 设置 Rect 和 Hitbox
         self.rect = self.image.get_rect(center=pos)
         # Hitbox 大小跟随 scale
         box_size = int(10 * self.scale)
         self.hitbox = pygame.Rect(0, 0, box_size, box_size)
         self.hitbox.center = self.rect.center
-
         # 4. 记录起始位置
         self.pos_vec = pygame.math.Vector2(self.rect.center)
         self.distance_traveled = 0
@@ -175,22 +168,17 @@ class Orbital(GameSprite):
         # 1. 旋转位置计算
         self.angle += self.rot_speed * dt
         if self.angle >= 360: self.angle -= 360
-        # 简单的极坐标转换
-        rad = math.radians(self.angle)
+        rad = math.radians(self.angle)      # 简单的极坐标转换
         offset_x = math.cos(rad) * self.radius
         offset_y = math.sin(rad) * self.radius
-        # 跟随玩家中心
-        self.rect.centerx = self.player.rect.center[0] + offset_x
+        self.rect.centerx = self.player.rect.center[0] + offset_x   # 跟随玩家中心
         self.rect.centery = self.player.rect.center[1] + offset_y
-
         # 动画更新 + 实时缩放
         self.image = self.anim_player.get_frame_image(dt, loop=True, scale=current_scale)
-        
         # 动态更新 Hitbox 
         self.rect = self.image.get_rect(center=self.rect.center)
         self.hitbox = self.rect.inflate(0, 0)
-
-        # 伤害判定 (基于时间间隔) [优化] 使用距离预过滤
+        # 伤害判定 
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
             # [优化] 先进行距离预过滤
@@ -203,12 +191,10 @@ class Orbital(GameSprite):
                 distance_sq = (orbital_pos - enemy_pos).length_squared()
                 if distance_sq <= max_check_distance * max_check_distance:
                     nearby_enemies.append(enemy)
-            
             # 只对附近的敌人进行精确碰撞检测
             if nearby_enemies:
                 hits = pygame.sprite.spritecollide(self, pygame.sprite.Group(nearby_enemies), 
                                                   False, lambda s, e: s.hitbox.colliderect(e.hitbox))
-                
                 if hits:
                     # 对碰到的所有敌人生效
                     for enemy in hits:
@@ -225,22 +211,19 @@ class Aura(GameSprite):
         self.player = player
         self.enemy_sprites = enemy_sprites
         
-        # 保存 data 的引用，而不是只读取一次数值
         self.weapon_data = weapon_data 
         self.data_ref = weapon_data.get('data', {}) # 快捷引用
-        # 初始读取
         self.damage = weapon_data['damage']
         self.dmg_interval = weapon_data['cooldown']
         self.current_scale = self.data_ref.get('scale', 1.0)
         self.radius_base = self.data_ref.get('radius', 100)
 
-        # [逻辑] 检查是否为占位符 (32x32 洋红色)
+        # [逻辑] 检查是否为占位符 
         full_image = weapon_data['image_surf']
         self.is_placeholder = False
         if full_image.get_size() == (32, 32):
              if full_image.get_at((16, 16)) == (255, 0, 255, 255): 
                  self.is_placeholder = True
-
         if self.is_placeholder:
             self.anim_player = None
             self.image = self._draw_placeholder_image()
@@ -273,10 +256,8 @@ class Aura(GameSprite):
         
         # 1. 图像处理
         if self.is_placeholder:
-            # 占位符每帧重画， 用于应对scale改变
-            self.image = self._draw_placeholder_image()
+            self.image = self._draw_placeholder_image() # 占位符每帧重画， 用于应对scale改变
         elif self.anim_player:
-            # 使用 vfx 封装的方法，直接获取缩放后的图
             self.image = self.anim_player.get_frame_image(dt, loop=True, scale=target_scale)
         
         # 2. 判定箱处理 (Visual 跟随 Scale, 判定也跟随 Scale)
@@ -284,29 +265,25 @@ class Aura(GameSprite):
         current_radius = self.radius_base * self.current_scale
         target_diameter = int(current_radius * 2)
         
-        # 确保 rect 中心正确
         self.rect = self.image.get_rect(center=self.player.rect.center)
-        
         # 强制 Hitbox 大小跟随计算出的直径
         if self.hitbox.width != target_diameter:
              self.hitbox = pygame.Rect(0, 0, target_diameter, target_diameter)
         
         self.hitbox.center = self.rect.center
         
-        # 3. 伤害逻辑 [优化] 使用距离预过滤
+        # 3. 伤害逻辑
         current_time = pygame.time.get_ticks()
         if current_time - self.attack_timer >= self.dmg_interval:
             # [优化] 先进行距离预过滤
             aura_pos = pygame.math.Vector2(self.rect.center)
             max_check_distance = current_radius + 50  # 检测半径 + 缓冲
             nearby_enemies = []
-            
             for enemy in self.enemy_sprites:
                 enemy_pos = pygame.math.Vector2(enemy.rect.center)
                 distance_sq = (aura_pos - enemy_pos).length_squared()
                 if distance_sq <= max_check_distance * max_check_distance:
                     nearby_enemies.append(enemy)
-            
             # 只对附近的敌人进行精确碰撞检测
             if nearby_enemies:
                 hits = pygame.sprite.spritecollide(self, pygame.sprite.Group(nearby_enemies), 
@@ -328,9 +305,7 @@ class WeaponController:
         self.equipped_weapons = [3001] 
         # 冷却列表 [0, 0, ...] (索引对应，独立计时)
         self.cooldowns = [0] * len(self.equipped_weapons)
-        # [新增] 环绕物管理组
-        # 我们用一个字典来追踪已生成的环绕物，Key=Index, Value=OrbitalSprite
-        # 或者更简单：每帧检查数量是否变化，变了就全删重生成（Roguelite中升级不频繁，这很安全且能保证排列整齐）
+        # 环绕物管理组
         self.orbital_sprites = pygame.sprite.Group()
         self.aura_sprites = pygame.sprite.Group()
         # 标记武器列表是否变化，避免每帧检查
@@ -345,14 +320,12 @@ class WeaponController:
         # 1. 自动扩容冷却列表 (防止数组越界)
         while len(self.cooldowns) < len(self.equipped_weapons):
             self.cooldowns.append(0)
-        
         # 2. 统计武器数量和类型 (用于计算扇形)
         total_counts = {}
         for w_id in self.equipped_weapons:
             total_counts[w_id] = total_counts.get(w_id, 0) + 1
-            
         # 3. 处理环绕物 (Orbital) 和光环（Aura）的生成与同步
-        # 策略：只在武器列表变化时检查并重新生成（避免每帧检查）
+        # 只在武器列表变化时检查并重新生成（避免每帧检查）
         if self._weapons_changed:
             # 统计当前应该有多少个环绕物和光环
             target_orbitals = []
@@ -364,7 +337,7 @@ class WeaponController:
                 if w_type == 'orbital': target_orbitals.append(w_id)
                 elif w_type == 'aura': target_auras.append(w_id)
                     
-            # 如果数量不对，重置所有环绕物和光环
+            # 如果数量更新，重置所有环绕物和光环
             if len(self.aura_sprites) != len(target_auras): 
                 self._respawn_auras(target_auras)
             if len(self.orbital_sprites) != len(target_orbitals): 
@@ -374,23 +347,21 @@ class WeaponController:
 
         processed_rank = {}
 
-        # 4. 按【索引】遍历，实现独立冷却
+        # 按索引遍历，实现独立冷却
         # 4. 处理发射型 (Projectile)
         mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
         screen_center = pygame.math.Vector2(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
         direction = mouse_pos - screen_center
 
-        # [关键] 只有 type='projectile' (或没写type默认是projectile) 才执行发射逻辑
         for i, w_id in enumerate(self.equipped_weapons):
             w_data = self.res.data['weapons'].get(w_id)
             if not w_data: continue
             if w_data.get('type', 'projectile') != 'projectile': continue
             
-            # 计算扇形参数
+            # 扇形发射
             total = total_counts[w_id]
             rank = processed_rank.get(w_id, 0)
             processed_rank[w_id] = rank + 1
-            
             angle_offset = 0
             if total > 1:
                 spread = 15 * (total - 1)
@@ -402,22 +373,16 @@ class WeaponController:
 
     def _respawn_orbitals(self, orbital_ids):
         """清空并重新生成所有环绕物，确保角度均匀"""
-        # 1. 清理旧的
-        for sprite in self.orbital_sprites:
+        for sprite in self.orbital_sprites: # 清理旧的
             sprite.kill()
         self.orbital_sprites.empty()
-        
         if not orbital_ids: return
-        # 2. 重新生成
-        count = len(orbital_ids)
+        count = len(orbital_ids)    # 重新生成
         step = 360 / count # 均匀分布角度
         
         for i, w_id in enumerate(orbital_ids):
             w_data = self.res.data['weapons'].get(w_id)
-            
-            # 准备数据 (使用 effect 字段作为图像)
             orb_data = w_data.copy()
-            # 优先使用 effect
             effect_key = w_data.get('effect', w_data['image'])
             orb_data['image_surf'] = self.res.get_image(effect_key)
             
@@ -429,7 +394,6 @@ class WeaponController:
         for sprite in self.aura_sprites: sprite.kill()
         self.aura_sprites.empty()
         
-        # Aura 不需要分布角度，它们都重叠在脚下 (或者如果种类不同，可以叠加)
         for w_id in aura_ids:
             w_data = self.res.data['weapons'].get(w_id)
             aura_data = w_data.copy()
@@ -449,16 +413,11 @@ class WeaponController:
         player_pos = pygame.math.Vector2(self.player.rect.center)
         projectile_data = w_data.copy()
         
-        # [Bug修复] 显式打印调试信息
-        # 1. 尝试获取 effect 字段
+        # 尝试获取 effect 字段，如果没有 effect，回退到 image
         effect_key = w_data.get('effect')
-        
-        # 2. 如果没有 effect，回退到 image
         if not effect_key:
-            # print(f"[WEAPON WARNING] ID {w_data['id']} missing 'effect' field. Using icon.")
             effect_key = w_data.get('image')
-        
-        # 3. 传入 Projectile 的是最终确定的 Surface
+        # 传入 Projectile 的是最终确定的 Surface
         projectile_data['image_surf'] = self.res.get_image(effect_key)
         
         Projectile(

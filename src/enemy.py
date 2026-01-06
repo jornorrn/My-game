@@ -34,7 +34,6 @@ class Enemy(Entity):
         shadow_img = self.res.get_image('shadow')
         # 缩放阴影图片为合适尺寸（entity类型使用24x10）
         shadow_img = pygame.transform.scale(shadow_img, (24, 10))
-        # shadow_img.set_alpha(128)   # 设置半透明效果（50%透明度）
         Shadow(self, groups, shadow_img)
         
         self.rect = self.image.get_rect(topleft=pos)
@@ -51,7 +50,7 @@ class Enemy(Entity):
     def _check_out_of_bounds(self):
         """
         检查怪物是否在墙外，如果在墙外则自动死亡
-        这是一个安全机制，防止怪物出现在墙外
+        防止怪物出现在墙外
         """
         if not self.map_manager:
             return False  # 如果没有地图管理器，跳过检查
@@ -61,17 +60,14 @@ class Enemy(Entity):
         center_y = self.rect.centery
         grid_x = center_x // TILE_SIZE
         grid_y = center_y // TILE_SIZE
-        
         # 检查是否在边界墙的网格坐标上
         if (grid_x <= 0 or grid_x >= self.map_manager.width - 1 or
             grid_y <= 0 or grid_y >= self.map_manager.height - 1):
             return True  # 在墙外
-        
         # 检查像素坐标是否超出安全范围
         if (center_x < TILE_SIZE or center_x > (self.map_manager.width - 2) * TILE_SIZE or
             center_y < TILE_SIZE or center_y > (self.map_manager.height - 2) * TILE_SIZE):
             return True  # 在墙外
-        
         # 检查是否在墙的网格坐标上（使用地图网格数据）
         if (grid_x, grid_y) in self.map_manager.grid:
             if self.map_manager.grid[(grid_x, grid_y)] == 'wall':
@@ -80,7 +76,7 @@ class Enemy(Entity):
         return False  # 在墙内，安全
     
     def update(self, dt):
-        # 0. [新增] 检查是否在墙外，如果是则自动死亡
+        # 检查是否在墙外，如果是则自动死亡
         if self._check_out_of_bounds():
             print(f"[WARNING] Enemy detected outside walls at ({self.rect.centerx}, {self.rect.centery}), auto-killing...")
             self.die(give_xp=False)  # 墙外死亡不给予经验值
@@ -91,7 +87,6 @@ class Enemy(Entity):
         player_vec = pygame.math.Vector2(self.player.rect.center)
         distance_sq = (player_vec - enemy_vec).length_squared()
         distance = distance_sq ** 0.5
-        
         # 根据距离设置更新频率
         if distance > 800:  # 远离玩家（>800像素）
             self.update_frame_skip = 3  # 每3帧更新一次
@@ -99,11 +94,11 @@ class Enemy(Entity):
             self.update_frame_skip = 2  # 每2帧更新一次
         else:  # 近距离（<400像素）
             self.update_frame_skip = 1  # 每帧更新
-        
         # 只在需要时更新（根据更新频率）
         self.frame_count += 1
         should_update = (self.frame_count % self.update_frame_skip == 0)
         
+        # 开始更新
         # 1. 计算指向玩家的向量（总是更新，确保敌人能追踪玩家）
         diff = player_vec - enemy_vec
         if diff.magnitude() > 0:
@@ -115,24 +110,18 @@ class Enemy(Entity):
         if should_update:
             self.image = self.anim_player.get_frame_image(dt * self.update_frame_skip, loop=True, scale=self.scale)
         
-        # 2.5. [修改] 根据玩家位置翻转图像（确保怪物朝向玩家）
-        # 计算玩家相对于怪物的位置
+        # 根据玩家位置翻转图像，使怪物朝向玩家
         player_x = self.player.rect.centerx
         enemy_x = self.rect.centerx
-        # 如果玩家在怪物左边，需要面向左（翻转图像）
-        # 素材默认"尾巴在左边，头在右边"（面向右侧），所以需要翻转才能面向左侧的玩家
         should_face_left = player_x < enemy_x
         
-        # 如果获取了新动画帧，需要根据当前方向重新应用翻转（因为新帧是未翻转的原始帧）
-        # 如果方向改变了，也需要重新获取当前帧并应用翻转
         if should_update:
-            # 获取了新帧，根据当前方向重新应用翻转
+            # 获取新帧，根据当前方向重新应用翻转
             if should_face_left:
                 self.image = pygame.transform.flip(self.image, True, False)
             self.facing_left = should_face_left
         elif should_face_left != self.facing_left:
-            # 方向改变了，需要重新获取当前帧并应用正确的翻转
-            # 因为无法"取消翻转"，所以需要从原始帧重新开始
+            # 方向改变，重新获取当前帧并应用正确的翻转
             # 获取当前帧索引（不更新动画进度）
             current_frame_idx = int(self.anim_player.frame_index)
             if current_frame_idx >= len(self.anim_player.frames):
@@ -166,8 +155,6 @@ class Enemy(Entity):
                 self.image = pygame.transform.flip(self.image, True, False)
             self.facing_left = should_face_left
         
-        
-        
         # 3. 移动与碰撞伤害 (撞玩家) - 总是更新，确保碰撞检测准确
         self.move(dt)
         if self.hitbox.colliderect(self.player.hitbox):
@@ -194,7 +181,7 @@ class Enemy(Entity):
         if should_create_flash:
             # 防止特效加入 enemy_sprites 组
             # self.groups()[0] 通常是 all_sprites (YSortCameraGroup)
-            # 我们只把特效加到渲染组，不加到碰撞组
+            # 只把特效加到渲染组，不加到碰撞组
             render_group = self.groups()[0] 
             FlashEffect(self, [render_group], duration=0.1)
         # 死亡判定
@@ -221,11 +208,6 @@ class Enemy(Entity):
             should_create_vfx = True
             
             # 如果敌人数量很多，随机跳过部分特效
-            # 通过检查 enemy_sprites 组的大小来判断（需要传入或访问）
-            # 这里使用一个简单的方法：通过检查所有精灵中敌人的数量
-            # 由于 enemy_sprites 组在 game 中，我们无法直接访问，所以使用概率控制
-            # 当敌人密度高时（通过检查周围敌人数量或使用固定概率）
-            # 使用固定概率：后期减少50%的特效生成
             if self.player.level > 10:
                 # 10级后，50%概率跳过特效生成
                 should_create_vfx = random.random() < 0.5

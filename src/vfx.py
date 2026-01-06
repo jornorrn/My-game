@@ -13,7 +13,7 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
     # 1. 自动计算单帧宽度 (如果不含 spacing 的简单情况)
     if frame_w <= 0:
         if frame_count <= 0: frame_count = 1
-        # 如果有 spacing，自动计算会很复杂，建议外部传入 frame_w
+        # 通过外部传入 frame_w 帧宽，进行切割
         available_w = sheet_w - margin - (spacing * (frame_count - 1))
         frame_w = available_w // frame_count
     
@@ -22,7 +22,7 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
         # 计算精确坐标
         x = margin + i * (frame_w + spacing)
         
-        # [改进] 处理最后一帧：如果超出范围，使用剩余宽度
+        # 处理最后一帧：如果超出范围，使用剩余宽度
         if x >= sheet_w:
             # 如果起始位置已经超出，停止切割
             break
@@ -43,7 +43,7 @@ def slice_frames(sheet, frame_count, frame_w=0, spacing=0, margin=0):
             # 如果subsurface失败，停止切割
             break
             
-    # 如果切割失败（比如图片太小切不出来），至少返回原图防止崩溃
+    # 如果切割失败（比如图片太小切不出来），返回原图防止崩溃
     if not frames:
         frames.append(sheet)
         
@@ -64,7 +64,7 @@ class AnimationPlayer:
         # data_dict 通常是 json 里的 "data" 字段
         frame_count = data_dict.get('frames', 1)
         frame_w = data_dict.get('frame_width', 0) 
-         # [新增] 读取间距参数
+        # 读取间距参数
         spacing = data_dict.get('spacing', 0)
         margin = data_dict.get('margin', 0)
         
@@ -119,7 +119,7 @@ class AnimationPlayer:
         raw_img = self.update(dt, loop)
         if not raw_img: return None
         
-        # [优化] 如果不需要缩放，直接返回原图
+        # 如果不需要缩放，直接返回原图
         if scale == 1.0:
             return raw_img
         
@@ -138,7 +138,7 @@ class AnimationPlayer:
         # [优化] 限制缓存大小，避免内存占用过大
         # 只保留最近使用的 50 个缓存项
         if len(self.scale_cache) > 50:
-            # 删除最旧的缓存项（简单策略：清空一半）
+            # 删除最旧的缓存项（清空一半）
             keys_to_remove = list(self.scale_cache.keys())[:25]
             for key in keys_to_remove:
                 del self.scale_cache[key]
@@ -147,11 +147,11 @@ class AnimationPlayer:
         return scaled_img
         
     def get_all_frames(self):
-        """获取所有原始帧 (用于像子弹那样需要预先旋转的情况)"""
+        """获取所有原始帧 (用于如子弹需要预先旋转的情况)"""
         return self.frames
 
 class FlashEffect(pygame.sprite.Sprite):
-    """受击闪白/闪红特效"""
+    """受击闪白特效"""
     def __init__(self, target_sprite, groups, duration=0.1):
         super().__init__(groups)
         self.target = target_sprite
@@ -202,24 +202,19 @@ class Explosion(pygame.sprite.Sprite):
             self.kill()
             return
         
-        # [优化] 明确设置每帧大小为 64x64，确保正确裁切
-        # 期望每帧大小为 64x64
         frame_width = 64
         frame_height = 64
-        
-        # 构造 data_dict 给 AnimationPlayer 用
+
         anim_data = {
             'frames': frame_count,
-            'frame_width': frame_width,  # 明确设置为 64
+            'frame_width': frame_width,  
             'spacing': 0,
             'margin': 0
         }
-        
         # 使用 AnimationPlayer 进行帧切割
         self.anim_player = AnimationPlayer(texture, anim_data, default_speed=20)
         
-        # [关键修复] 确保每帧都是 64x64 大小
-        # slice_frames 使用整个图片高度作为帧高度，所以需要后处理确保每帧都是 64x64
+        # slice_frames 使用整个图片高度作为帧高度，需要后处理（缩放/裁切）
         for i, frame in enumerate(self.anim_player.frames):
             frame_w, frame_h = frame.get_size()
             if frame_w != frame_width or frame_h != frame_height:
